@@ -17,14 +17,31 @@ int main(int Argc, const char** Argv) {
         // 1 represent error
         return 1;
     }
-
     printf("  .globl main\n");
     // main段标签
     printf("main:\n");
+    
+    char* Pos = Argv[1];//args list pointer
+    //num (op num) (op num)...
+    
     // li为addi别名指令，加载一个立即数到寄存器中
     // 传入程序的参数为str类型，因为需要转换为需要int类型，
     // atoi为“ASCII to integer”
-    printf("  li a0, %d\n", atoi(Argv[1]));
+    printf("  li a0, %ld\n", strtol(Pos, &Pos, 10));
+
+    while(*Pos != '\0') {
+        if(*Pos == '+') {
+            ++Pos;
+            printf("  addi a0, a0, %ld\n", strtol(Pos, &Pos, 10));
+            continue;
+        }else if(*Pos == '-') {
+            ++Pos;
+            printf("  addi a0, a0, -%ld\n", strtol(Pos, &Pos, 10));
+            continue;
+        }
+        fprintf(stderr, "unexpected character:'%c'\n", *Pos);
+        return 1;
+    }
     // ret为jalr x0, x1, 0别名指令，用于返回子程序
     printf("  ret\n");
 

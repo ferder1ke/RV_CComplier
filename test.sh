@@ -1,11 +1,6 @@
-#########################################################################
-# File Name:    test.sh
-# Author:       ferdi
-# mail:         22s121106@stu.hit.edu.cn
-# Created Time: Wed 31 Jan 2024 03:31:41 PM CST
-#########################################################################
 #!/bin/bash
 
+# 声明一个函数
 assert() {
   # 程序运行的 期待值 为参数1
   expected="$1"
@@ -16,13 +11,13 @@ assert() {
   # 如果运行不成功，则会执行exit退出。成功时会短路exit操作
   ./rvcc "$input" > tmp.s || exit
   # 编译rvcc产生的汇编文件
-  gcc -o tmp tmp.s
-  # $RISCV/bin/riscv64-unknown-linux-gnu-gcc -static -o tmp tmp.s
+  #  gcc -o tmp tmp.s
+  ~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o tmp tmp.s
 
   # 运行生成出来目标文件
-  ./tmp
-  # $RISCV/bin/qemu-riscv64 -L $RISCV/sysroot ./tmp
-  # $RISCV/bin/spike --isa=rv64gc $RISCV/riscv64-unknown-linux-gnu/bin/pk ./tmp
+  #./tmp
+  ~/riscv/bin/qemu-riscv64 -L ~/riscv/sysroot ./tmp
+  #~/riscv/bin/spike --isa=rv64gc ~/riscv/bin/riscv64-unknown-linux-gnu/bin/pk ./tmp
 
   # 获取程序返回值，存入 实际值
   actual="$?"
@@ -40,6 +35,9 @@ assert() {
 # [1] 返回指定数值
 assert 0 0
 assert 42 42
+
+# [2] 支持+ -运算符
+assert 34 '12-34+56'
 
 # 如果运行正常未提前退出，程序将显示OK
 echo OK
