@@ -1,11 +1,13 @@
 #-g debug flag
 CFLAGS=-std=c11 -g -fno-common
-
 CC=gcc
+SRCS=$(wildcard *.c)
+OBJS=$(SRCS:.c=.o)
 
-rvcc: main.o
-	$(CC) -o rvcc $(CFLAGS) main.o
-test: rvcc
+rvcc: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+$(OBJS): rvcc.h
+test:rvcc
 	./test.sh
 
 # 清理标签，清理所有非源代码文件
