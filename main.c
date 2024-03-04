@@ -67,6 +67,19 @@ static bool equal(Token* Tok, char* str){
     return memcmp(Tok->Pos, str, Tok->Len) == 0 && str[Tok->Len] == '\0';
 }
 
+static bool startWith(char* str, char* subStr) {
+    return strncmp(str, subStr, strlen(subStr)) == 0;
+}
+
+static int readPunct(char* P) {
+    if(startWith(P, "==") ||
+       startWith(P, "!=") ||
+       startWith(P, ">=") ||
+       startWith(P, "<="))
+        return 2;
+    return ispunct(*P) ? 1 : 0;
+}
+
 static Token* skip(Token* Tok, char* str) {
     if(!equal(Tok, str))
         errorTok(Tok, "expect '%s'", str);
@@ -105,11 +118,11 @@ static Token* tokenize() {
             cur->Len = P - oldPtr;
             continue;
        }
-
-       if(ispunct(*P)) {
-            cur->Next = genToken(TK_PUNCT, P, P + 1);
+       int punctLen = readPunct(P);
+       if(punctLen) {
+            cur->Next = genToken(TK_PUNCT, P, P + punctLen);
             cur = cur->Next;
-            ++P;
+            P += punctLen;
             continue;
        }
        errorAt(P, "invalid Token");
@@ -130,6 +143,10 @@ typedef enum {
     ND_DIV,// /
     ND_NUM,// number
     ND_NEG,// ~
+    ND_EQ,  // ==
+    ND_NE,  // !=
+    ND_LT,  // <
+    ND_LE,  // <=
 } NodeKind;
 
 typedef struct Node Node;
@@ -165,16 +182,64 @@ static Node* newNum(int Val) {
     return Nd;
 }
 
-//expr = mul ("+" mul | "-" mul)
-//mul = unary ("*" unary | "/" unary)
-//unary = "(" expr ")" | num
+// expr = equality
+// equality = relational ("==" relational | "!=" relational)*
+// relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+// add = mul ("+" mul | "-" mul)*
+//mul = unary ("*" unary | "/" unary)*
+//unary = "(" expr ")" | num*
 //preorder
 static Node* expr(Token** Rest, Token* Tok);
+static Node* equality(Token** Rest, Token* Tok);
+static Node* relational(Token** Rest, Token* Tok);
+static Node* add(Token** Rest, Token* Tok);
 static Node* mul(Token** Rest, Token* Tok);
 static Node* primary(Token** Rest, Token* Tok);
 static Node* unary(Token** Rest, Token* Tok);
 
+
 static Node* expr(Token** Rest, Token* Tok) {
+    return equality(Rest, Tok);
+}
+
+
+static Node* equality(Token** Rest, Token* Tok) {
+    Node* Nd = relational(&Tok, Tok);
+    while(1) {
+        if(equal(Tok, "==")) {
+            Nd = newBinary(ND_EQ, Nd, relational(&Tok, Tok->Next));
+            continue;
+        }else if(equal(Tok, "!=")) {
+            Nd = newBinary(ND_NE, Nd, relational(&Tok, Tok->Next));
+            continue;
+        }
+        *Rest = Tok;
+        return Nd;
+    }
+}
+
+static Node* relational(Token** Rest, Token* Tok) {
+    Node* Nd = add(&Tok, Tok);
+    while(1) {
+        if(equal(Tok, "<")) {
+            Nd = newBinary(ND_LT, Nd, add(&Tok, Tok->Next));
+            continue;
+        }else if(equal(Tok, ">")) {
+            Nd = newBinary(ND_LT, add(&Tok, Tok->Next), Nd);
+            continue;
+        }else if(equal(Tok, ">=")) {
+            Nd = newBinary(ND_LE, add(&Tok, Tok->Next), Nd);
+            continue;
+        }else if(equal(Tok, "<=")) {
+            Nd = newBinary(ND_LE, Nd, add(&Tok, Tok->Next));
+            continue;
+        }
+        *Rest = Tok;
+        return Nd;
+    }
+}
+
+static Node* add(Token** Rest, Token* Tok) {
     Node* Nd = mul(&Tok, Tok);
     while(1) {
         if(equal(Tok, "+")) {
@@ -213,6 +278,7 @@ static Node* unary(Token** Rest, Token* Tok) {
     }
     return primary(Rest, Tok);
 }
+
 static Node* primary(Token** Rest, Token* Tok) {
     if(equal(Tok, "(")) {
         Node* Nd = expr(&Tok, Tok->Next);
@@ -242,7 +308,7 @@ static void pop(char *Reg) {
 }
 
 static void genExpr(Node* AST) {
-    switch(AST->Kind) {
+    switch(AST->Kind) {//Two terminator
         case ND_NUM:
             printf("  li a0, %d\n", AST->Val);
             return;
@@ -254,10 +320,6 @@ static void genExpr(Node* AST) {
         break;
     }
 
-    if(AST->Kind == ND_NUM) {
-        printf("  li a0, %d\n", AST->Val);
-        return;    
-    }
     genExpr(AST->RHS);
     push();//right tree res push into a0 
     genExpr(AST->LHS);
@@ -275,6 +337,22 @@ static void genExpr(Node* AST) {
             return;
         case ND_DIV:
             printf("  div a0, a0, a1\n");
+            return;
+        case ND_EQ:
+        case ND_NE:
+            printf("  xor a0, a0, a1\n");
+            if(AST->Kind == ND_EQ) 
+                printf("  seqz a0, a0\n");
+            else 
+                printf("  snez a0, a0\n");
+            
+            return;
+        case ND_LT:
+            printf("  slt a0, a0, a1\n");
+            return;
+        case ND_LE:
+            printf("  slt a0, a1, a0\n");
+            printf("  xori a0, a0, 1\n");
             return;
         default:
             break;
