@@ -11,7 +11,7 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
-
+static char* currentInput;
 typedef enum {
     TK_PUNCT,
     TK_NUM,
@@ -36,19 +36,46 @@ static void error(char* Fmt, ...) {
     va_end(VA);
     exit(1);//Exception
 }
+
+static void __verrorAt(char* Loc, char* Fmt, va_list VA) {
+    fprintf(stderr, "%s\n", currentInput);
+
+    int Pos = Loc - currentInput;
+    fprintf(stderr, "%*s", Pos, " ");
+    fprintf(stderr, "^ ");
+    vfprintf(stderr, Fmt, VA);
+    fprintf(stderr, "\n");
+    va_end(VA);
+}
+
+static void errorAt(char* Loc, char* Fmt, ...) {
+    va_list VA;
+    va_start(VA, Fmt);
+    __verrorAt(Loc, Fmt, VA);
+    exit(1);
+}
+static void errorTok(Token* Tok, char* Fmt, ...) {
+    va_list VA;
+    va_start(VA, Fmt);
+    __verrorAt(Tok->Pos, Fmt, VA);
+    exit(1);
+}
+
 static bool equal(Token* Tok, char* str){
     return memcmp(Tok->Pos, str, Tok->Len) == 0 && str[Tok->Len] == '\0';
 }
 
 static Token* skip(Token* Tok, char* str) {
     if(!equal(Tok, str))
-        error("expect '%s'", str);
+        errorTok(Tok, "expect '%s'", str);
+        //error("expect '%s'", str);
     return Tok->Next;
 } 
 
 static int getNum(Token* Tok) {
     if(Tok->Kind != TK_NUM)
-        error("expect number!");
+        errorTok(Tok, "expect number!");
+        //error("expect number!");
     return Tok->Val;
 }
 
@@ -60,9 +87,10 @@ static Token* genToken(TokenKind Kind, char* Start, char* End) {
     return Tok;
 }
 
-static Token* parseToken(char* P) {
+static Token* parseToken() {
    Token Head = {};
    Token* cur = &Head;
+   char*  P = currentInput;
    while(*P != '\0') {
        if(isspace(*P)) {
             ++P;
@@ -84,6 +112,7 @@ static Token* parseToken(char* P) {
             ++P;
             continue;
        }
+       errorAt(P, "invalid Token");
        
        error("unexpected character %s", P);
    }
@@ -100,7 +129,8 @@ int main(int Argc, const char** Argv) {
         error("%s: invalid number of Arguments!\n", Argv[0]);
         // 1 represent error
     }
-    Token* Tok = parseToken(Argv[1]);
+    currentInput = Argv[1];
+    Token* Tok = parseToken();
     printf("  .globl main\n");
     printf("main:\n");
     //num (op num) (op num)...
