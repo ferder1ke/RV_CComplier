@@ -129,6 +129,7 @@ typedef enum {
     ND_MUL,// *
     ND_DIV,// /
     ND_NUM,// number
+    ND_NEG,// ~
 } NodeKind;
 
 typedef struct Node Node;
@@ -142,6 +143,12 @@ struct Node{
 static Node* newNode(NodeKind Kind) {
     Node* Nd = calloc(1, sizeof(Node));
     Nd->Kind = Kind;
+    return Nd;
+}
+
+static Node* newUnary(NodeKind Kind, Node* Expr) {
+    Node* Nd = newNode(Kind);
+    Nd->LHS = Expr;
     return Nd;
 }
 
@@ -159,13 +166,13 @@ static Node* newNum(int Val) {
 }
 
 //expr = mul ("+" mul | "-" mul)
-//mul = primary ("*" primary | "/" primary)
-//primary = "(" expr ")" | num
+//mul = unary ("*" unary | "/" unary)
+//unary = "(" expr ")" | num
 //preorder
 static Node* expr(Token** Rest, Token* Tok);
 static Node* mul(Token** Rest, Token* Tok);
 static Node* primary(Token** Rest, Token* Tok);
-
+static Node* unary(Token** Rest, Token* Tok);
 
 static Node* expr(Token** Rest, Token* Tok) {
     Node* Nd = mul(&Tok, Tok);
@@ -183,13 +190,13 @@ static Node* expr(Token** Rest, Token* Tok) {
 }
 
 static Node* mul(Token** Rest, Token* Tok) {
-    Node* Nd = primary(&Tok, Tok);
+    Node* Nd = unary(&Tok, Tok);
     while(1) {
         if(equal(Tok, "*")) {
-            Nd = newBinary(ND_MUL, Nd, primary(&Tok, Tok->Next));
+            Nd = newBinary(ND_MUL, Nd, unary(&Tok, Tok->Next));
             continue;
         }else if(equal(Tok, "/")) {
-            Nd = newBinary(ND_DIV, Nd, primary(&Tok, Tok->Next));
+            Nd = newBinary(ND_DIV, Nd, unary(&Tok, Tok->Next));
             continue;
         }
         *Rest = Tok;
@@ -197,6 +204,15 @@ static Node* mul(Token** Rest, Token* Tok) {
     }
 }
 
+//unary = (+ | -) unary | expr
+static Node* unary(Token** Rest, Token* Tok) {
+    if(equal(Tok, "+")) {
+       return unary(Rest, Tok->Next);    
+    }else if(equal(Tok, "-")) {
+       return newUnary(ND_NEG, unary(Rest, Tok->Next));
+    }
+    return primary(Rest, Tok);
+}
 static Node* primary(Token** Rest, Token* Tok) {
     if(equal(Tok, "(")) {
         Node* Nd = expr(&Tok, Tok->Next);
@@ -226,6 +242,18 @@ static void pop(char *Reg) {
 }
 
 static void genExpr(Node* AST) {
+    switch(AST->Kind) {
+        case ND_NUM:
+            printf("  li a0, %d\n", AST->Val);
+            return;
+        case ND_NEG:
+             genExpr(AST->LHS);
+             printf("  neg a0, a0\n");
+             return;
+        default:
+        break;
+    }
+
     if(AST->Kind == ND_NUM) {
         printf("  li a0, %d\n", AST->Val);
         return;    
