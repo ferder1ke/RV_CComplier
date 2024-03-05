@@ -14,8 +14,8 @@ int main(int Argc, const char** Argv) {
         // 1 represent error
     }
     Token* Tok = tokenize(Argv[1]);
-    Node* Nd = parse(Tok); 
-    codegen(Nd);
+    Function* Prog = parse(Tok); 
+    codegen(Prog);
     
     return 0;
 }

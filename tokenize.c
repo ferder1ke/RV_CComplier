@@ -78,6 +78,13 @@ static Token* genToken(TokenKind Kind, char* Start, char* End) {
     return Tok;
 }
 
+static bool isIdent1(char C) {
+    return ('a' <= C && C <= 'z') || ('A' <= C && C <= 'Z') || (C == '_');
+} 
+
+static bool isIdent2(char C) {
+    return isIdent1(C) || ('0' <= C && C <= '9');
+}
 Token* tokenize(char* P) {
    currentInput = P;
    Token Head = {};
@@ -97,10 +104,13 @@ Token* tokenize(char* P) {
             continue;
        }
        
-       if(*P <= 'z' && *P >= 'a') {
-           cur->Next = genToken(TK_IDENT, P, P + 1);
+       if(isIdent1(*P)) {
+           char* dst = P;
+           do{
+               ++P;
+           }while(isIdent2(*P));
+           cur->Next = genToken(TK_IDENT, dst, P);
            cur = cur->Next;
-           ++P;
            continue;
        }
 

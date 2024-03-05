@@ -4,6 +4,8 @@
 > Created Time:  Mon 04 Mar 2024 10:18:03 PM CST
 > Description:   
  ************************************************************************/
+#define _POSIX_C_SOURCE 200809L
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,6 +38,21 @@ bool equal(Token *Tok, char *Str);
 Token *skip(Token *Tok, char *Str);
 Token *tokenize(char *Input);
 
+typedef struct Node Node;
+
+typedef struct Obj Obj;
+struct Obj {
+  Obj *Next; 
+  char *Name; 
+  int Offset; 
+};
+
+typedef struct Function Function;
+struct Function {
+  Node *Body;    
+  Obj *Locals;  
+  int StackSize;
+};
 
 /*semantic analysis*/
 typedef enum {
@@ -61,8 +78,8 @@ struct Node{
     Node* Next;
     Node* LHS;
     Node* RHS;
-    char Name;
+    Obj*  Var;
 };
 
-Node *parse(Token *Tok);
-void codegen(Node *Nd);
+Function *parse(Token *Tok);
+void codegen(Function* Prog);

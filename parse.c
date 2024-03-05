@@ -6,6 +6,18 @@
  ************************************************************************/
 #include "rvcc.h"
 
+Obj* Locals;
+
+static Obj* findVar(Token* Tok) {
+    for(Obj* obj = Locals; obj; obj = obj->Next) {
+        if((strlen(obj->Name) == Tok->Len) 
+                && !strncmp(Tok->Pos, obj->Name, Tok->Len)){
+            return obj;
+        }
+    }
+    return NULL;
+}
+
 static Node* newNode(NodeKind Kind) {
     Node* Nd = calloc(1, sizeof(Node));
     Nd->Kind = Kind;
@@ -31,10 +43,18 @@ static Node* newNum(int Val) {
     return Nd;
 }
 
-static Node* newVar(char Var) {
+static Node* newVar(Obj* Var) {
     Node* Nd = newNode(ND_VAR);
-    Nd->Name = Var;
+    Nd->Var = Var;
     return Nd;
+}
+
+static Obj* newLVar(char* Name) {
+    Obj* obj = calloc(1, sizeof(Obj));
+    obj->Name = Name;
+    obj->Next = Locals;
+    Locals = obj;
+    return obj;
 }
 
 // program = stmt*
@@ -164,12 +184,15 @@ static Node* primary(Token** Rest, Token* Tok) {
         Node* Nd = expr(&Tok, Tok->Next);
         *Rest = skip(Tok, ")");
         return Nd;
+    }else if(Tok->Kind == TK_IDENT) {
+        Obj* Var = findVar(Tok);
+        if(!Var){
+            Var = newLVar(strndup(Tok->Pos, Tok->Len));
+        }
+        *Rest = Tok->Next;
+        return newVar(Var);
     }else if(Tok->Kind == TK_NUM) {
         Node* Nd = newNum(Tok->Val);
-        *Rest = Tok->Next;
-        return Nd;
-    }else if(Tok->Kind == TK_IDENT) {
-        Node* Nd = newVar(*Tok->Pos);
         *Rest = Tok->Next;
         return Nd;
     }
@@ -177,12 +200,15 @@ static Node* primary(Token** Rest, Token* Tok) {
     return NULL;
 }
 
-Node *parse(Token *Tok) {
+Function* parse(Token *Tok) {
     Node Head = {};
     Node* Cur = &Head;
     do{
         Cur->Next = stmt(&Tok, Tok);
         Cur = Cur->Next;
     }while(Tok->Kind != TK_EOF);
-    return Head.Next;
+    Function* prog = calloc(1, sizeof(Function));
+    prog->Body = Head.Next;
+    prog->Locals = Locals;
+    return prog;
 }

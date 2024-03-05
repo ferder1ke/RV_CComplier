@@ -21,11 +21,23 @@ static void pop(char *Reg) {
 
 static int getAddr(Node* Nd) {
     if(Nd->Kind == ND_VAR) {
-        int offset = (Nd->Name - 'a' + 1) * 8;
-        printf("  addi a0, fp, %d\n", -offset);
+        printf("  addi a0, fp, %d\n", Nd->Var->Offset);
         return;
     }
     error("not an lvalue");
+}
+
+static int alignTo(int N, int Align) {
+    return (N + Align - 1) / Align * Align;
+}
+
+static void assignLVarOffsets(Function* prog) {
+    int Offset = 0;
+    for(Obj* Var = prog->Locals; Var; Var = Var->Next){
+        Offset += 8;
+        Var->Offset = -Offset;
+    }
+    prog->StackSize = alignTo(Offset, 16);
 }
 
 static void genExpr(Node* AST) {
@@ -98,15 +110,16 @@ static void genStmt(Node *Nd) {
     }
     error("invalid statement");
 }
-void codegen(Node *Nd) {
+void codegen(Function* prog) {
+    assignLVarOffsets(prog);
     printf("  .globl main\n");
     printf("main:\n");
     printf("  addi sp, sp, -8\n");
     printf("  sd fp, 0(sp)\n");
     printf("  mv fp, sp\n");
 
-    printf("  addi sp, sp, -208\n");
-    for(Node* N = Nd; N; N = N->Next){
+    printf("  addi sp, sp, %d\n", -prog->StackSize);
+    for(Node* N = prog->Body; N; N = N->Next){
         genStmt(N);
         assert(Depth == 0);
     }
