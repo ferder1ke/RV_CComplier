@@ -38,22 +38,24 @@ Token *tokenize(char *Input);
 
 /*semantic analysis*/
 typedef enum {
-    ND_ADD,// +
-    ND_SUB,// -
-    ND_MUL,// *
-    ND_DIV,// /
-    ND_NUM,// number
-    ND_NEG,// ~
-    ND_EQ,  // ==
-    ND_NE,  // !=
-    ND_LT,  // <
-    ND_LE,  // <=
+    ND_ADD,         // +
+    ND_SUB,         // -
+    ND_MUL,         // *
+    ND_DIV,         // /
+    ND_NUM,         // number
+    ND_NEG,         // ~
+    ND_EQ,          // ==
+    ND_NE,          // !=
+    ND_LT,          // <
+    ND_LE,          // <=
+    ND_EXPR_STMT,   // ;
 } NodeKind;
 
 typedef struct Node Node;
 struct Node{
     NodeKind Kind;
     int Val;
+    Node* Next;
     Node* LHS;
     Node* RHS;
 };

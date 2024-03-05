@@ -71,12 +71,19 @@ static void genExpr(Node* AST) {
     }
     error("invalid expression!");    
 }
+static void genStmt(Node *Nd) {
+    if(Nd->Kind == ND_EXPR_STMT) {
+        genExpr(Nd->LHS);
+        return;
+    }
+    error("invalid statement");
+}
 void codegen(Node *Nd) {
     printf("  .globl main\n");
     printf("main:\n");
-
-    genExpr(Nd);
+    for(Node* N = Nd; N; N = N->Next){
+        genStmt(N);
+        assert(Depth == 0);
+    }
     printf("  ret\n");
-
-    assert(Depth == 0);
 }

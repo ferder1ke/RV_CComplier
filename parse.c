@@ -30,7 +30,9 @@ static Node* newNum(int Val) {
     Nd->Val = Val;
     return Nd;
 }
-
+// program = stmt*
+// stmt = exprStmt
+// exprStmt = expr ";"
 // expr = equality
 // equality = relational ("==" relational | "!=" relational)*
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
@@ -38,6 +40,8 @@ static Node* newNum(int Val) {
 //mul = unary ("*" unary | "/" unary)*
 //unary = "(" expr ")" | num*
 //preorder
+static Node* stmt(Token** Rest, Token* Tok);
+static Node* exprStmt(Token** Rest, Token* Tok);
 static Node* expr(Token** Rest, Token* Tok);
 static Node* equality(Token** Rest, Token* Tok);
 static Node* relational(Token** Rest, Token* Tok);
@@ -46,6 +50,15 @@ static Node* mul(Token** Rest, Token* Tok);
 static Node* primary(Token** Rest, Token* Tok);
 static Node* unary(Token** Rest, Token* Tok);
 
+static Node* stmt(Token** Rest, Token* Tok){
+    Node* Nd = exprStmt(Rest, Tok);
+    return Nd;
+}
+static Node* exprStmt(Token** Rest, Token* Tok) {
+   Node* Nd = newUnary(ND_EXPR_STMT, expr(&Tok, Tok));
+   *Rest = skip(Tok, ";");
+   return Nd;
+}
 
 static Node* expr(Token** Rest, Token* Tok) {
     return equality(Rest, Tok);
@@ -143,8 +156,11 @@ static Node* primary(Token** Rest, Token* Tok) {
 }
 
 Node *parse(Token *Tok) {
-    Node *Nd = expr(&Tok, Tok);
-    if (Tok->Kind != TK_EOF)
-    errorTok(Tok, "extra token");
-    return Nd;
+    Node Head = {};
+    Node* Cur = &Head;
+    do{
+        Cur->Next = stmt(&Tok, Tok);
+        Cur = Cur->Next;
+    }while(Tok->Kind != TK_EOF);
+    return Head.Next;
 }
