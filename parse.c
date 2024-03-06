@@ -30,19 +30,30 @@ static Node* newNum(int Val) {
     Nd->Val = Val;
     return Nd;
 }
+
+static Node* newVar(char Var) {
+    Node* Nd = newNode(ND_VAR);
+    Nd->Name = Var;
+    return Nd;
+}
+
 // program = stmt*
 // stmt = exprStmt
 // exprStmt = expr ";"
-// expr = equality
+// expr = assign
+// assign = equality ("=" assign)?
 // equality = relational ("==" relational | "!=" relational)*
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // add = mul ("+" mul | "-" mul)*
 //mul = unary ("*" unary | "/" unary)*
-//unary = "(" expr ")" | num*
+//unary = (+ | -) unary |  primary 
+//primary = "(" expr ")" | num | ident
 //preorder
+
 static Node* stmt(Token** Rest, Token* Tok);
 static Node* exprStmt(Token** Rest, Token* Tok);
 static Node* expr(Token** Rest, Token* Tok);
+static Node* assign(Token** Rest, Token* Tok);
 static Node* equality(Token** Rest, Token* Tok);
 static Node* relational(Token** Rest, Token* Tok);
 static Node* add(Token** Rest, Token* Tok);
@@ -61,9 +72,17 @@ static Node* exprStmt(Token** Rest, Token* Tok) {
 }
 
 static Node* expr(Token** Rest, Token* Tok) {
-    return equality(Rest, Tok);
+    return assign(Rest, Tok);
 }
 
+static Node* assign(Token** Rest, Token* Tok) {
+    Node* Nd = equality(&Tok, Tok);
+    if(equal(Tok, "=")) {
+        Nd = newBinary(ND_ASSIGN, Nd, assign(&Tok, Tok->Next));    
+    }
+    *Rest = Tok;
+    return Nd;
+}
 
 static Node* equality(Token** Rest, Token* Tok) {
     Node* Nd = relational(&Tok, Tok);
@@ -131,7 +150,6 @@ static Node* mul(Token** Rest, Token* Tok) {
     }
 }
 
-//unary = (+ | -) unary | expr
 static Node* unary(Token** Rest, Token* Tok) {
     if(equal(Tok, "+")) {
        return unary(Rest, Tok->Next);    
@@ -148,6 +166,10 @@ static Node* primary(Token** Rest, Token* Tok) {
         return Nd;
     }else if(Tok->Kind == TK_NUM) {
         Node* Nd = newNum(Tok->Val);
+        *Rest = Tok->Next;
+        return Nd;
+    }else if(Tok->Kind == TK_IDENT) {
+        Node* Nd = newVar(*Tok->Pos);
         *Rest = Tok->Next;
         return Nd;
     }

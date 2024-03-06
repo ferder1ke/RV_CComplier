@@ -96,6 +96,14 @@ Token* tokenize(char* P) {
             cur->Len = P - oldPtr;
             continue;
        }
+       
+       if(*P <= 'z' && *P >= 'a') {
+           cur->Next = genToken(TK_IDENT, P, P + 1);
+           cur = cur->Next;
+           ++P;
+           continue;
+       }
+
        int punctLen = readPunct(P);
        if(punctLen) {
             cur->Next = genToken(TK_PUNCT, P, P + punctLen);
@@ -103,6 +111,7 @@ Token* tokenize(char* P) {
             P += punctLen;
             continue;
        }
+       
        errorAt(P, "invalid Token");
        
        error("unexpected character %s", P);
