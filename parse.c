@@ -57,8 +57,9 @@ static Obj* newLVar(char* Name) {
     return obj;
 }
 
-// program = stmt*
-// stmt = "return" expr ";" | exprStmt
+// program = "{" compoundStmt
+// compoundStmt = stmt* "}";
+// stmt = "return" expr ";" | "{"compoundStmt | exprStmt
 // exprStmt = expr ";"
 
 // expr = assign
@@ -82,6 +83,8 @@ static Node* add(Token** Rest, Token* Tok);
 static Node* mul(Token** Rest, Token* Tok);
 static Node* primary(Token** Rest, Token* Tok);
 static Node* unary(Token** Rest, Token* Tok);
+static Node* compoundStmt(Token** Rest, Token* Tok);
+
 
 static Node* stmt(Token** Rest, Token* Tok){
     if(equal(Tok, "return")) {
@@ -89,9 +92,27 @@ static Node* stmt(Token** Rest, Token* Tok){
         *Rest = skip(Tok, ";");
         return Nd;
     }
+    if(equal(Tok, "{")) {
+        return compoundStmt(Rest, Tok->Next);
+    }
     Node* Nd = exprStmt(Rest, Tok);
     return Nd;
 }
+
+static Node* compoundStmt(Token** Rest, Token* Tok) {
+   Node Head = {};
+   Node* Cur = &Head;
+   while(!equal(Tok, "}")) {
+       Cur->Next = stmt(&Tok, Tok);
+       Cur = Cur->Next;
+   }
+   
+   Node* Nd = newNode(ND_BLOCK);
+   Nd->Body = Head.Next;
+   *Rest = Tok->Next;
+   return Nd;
+}
+
 static Node* exprStmt(Token** Rest, Token* Tok) {
    Node* Nd = newUnary(ND_EXPR_STMT, expr(&Tok, Tok));
    *Rest = skip(Tok, ";");
@@ -208,14 +229,9 @@ static Node* primary(Token** Rest, Token* Tok) {
 }
 
 Function* parse(Token *Tok) {
-    Node Head = {};
-    Node* Cur = &Head;
-    do{
-        Cur->Next = stmt(&Tok, Tok);
-        Cur = Cur->Next;
-    }while(Tok->Kind != TK_EOF);
+    Tok = skip(Tok, "{");
     Function* prog = calloc(1, sizeof(Function));
-    prog->Body = Head.Next;
+    prog->Body = compoundStmt(&Tok, Tok);
     prog->Locals = Locals;
     return prog;
 }

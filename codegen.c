@@ -116,6 +116,10 @@ static void genStmt(Node *Nd) {
   case ND_EXPR_STMT:
     genExpr(Nd->LHS);
     return;
+  case ND_BLOCK:
+    for(Node* Cur = Nd->Body; Cur; Cur = Cur->Next)
+        genStmt(Cur);
+    return;
   default:
     break;
   }
@@ -131,10 +135,9 @@ void codegen(Function* prog) {
     printf("  mv fp, sp\n");
 
     printf("  addi sp, sp, -%d\n", prog->StackSize);
-    for(Node* N = prog->Body; N; N = N->Next){
-        genStmt(N);
-        assert(Depth == 0);
-    }
+    genStmt(prog->Body);
+    assert(Depth == 0);
+    
     printf(".L.return:\n");
     printf("  mv sp, fp\n");
     printf("  ld fp, 0(sp)\n");

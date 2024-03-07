@@ -69,8 +69,9 @@ typedef enum {
     ND_LE,          // <=
     ND_EXPR_STMT,   // ;
     ND_ASSIGN,      // assign
-    ND_VAR,          // var
-    ND_RETURN       // return
+    ND_VAR,         // var
+    ND_RETURN,       // return
+    ND_BLOCK
 } NodeKind;
 
 typedef struct Node Node;
@@ -81,6 +82,7 @@ struct Node{
     Node* LHS;
     Node* RHS;
     Obj*  Var;
+    Node* Body;
 };
 
 Function *parse(Token *Tok);
