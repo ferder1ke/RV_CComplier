@@ -60,7 +60,7 @@ static Obj* newLVar(char* Name) {
 // program = "{" compoundStmt
 // compoundStmt = stmt* "}";
 // stmt = "return" expr ";" | "{"compoundStmt | exprStmt
-// exprStmt = expr ";"
+// exprStmt = expr? ";"
 
 // expr = assign
 // assign = equality ("=" assign)?
@@ -73,6 +73,7 @@ static Obj* newLVar(char* Name) {
 //primary = "(" expr ")" | num | ident
 //preorder
 
+static Node* compoundStmt(Token** Rest, Token* Tok);
 static Node* stmt(Token** Rest, Token* Tok);
 static Node* exprStmt(Token** Rest, Token* Tok);
 static Node* expr(Token** Rest, Token* Tok);
@@ -83,21 +84,6 @@ static Node* add(Token** Rest, Token* Tok);
 static Node* mul(Token** Rest, Token* Tok);
 static Node* primary(Token** Rest, Token* Tok);
 static Node* unary(Token** Rest, Token* Tok);
-static Node* compoundStmt(Token** Rest, Token* Tok);
-
-
-static Node* stmt(Token** Rest, Token* Tok){
-    if(equal(Tok, "return")) {
-        Node* Nd = newUnary(ND_RETURN, expr(&Tok, Tok->Next));
-        *Rest = skip(Tok, ";");
-        return Nd;
-    }
-    if(equal(Tok, "{")) {
-        return compoundStmt(Rest, Tok->Next);
-    }
-    Node* Nd = exprStmt(Rest, Tok);
-    return Nd;
-}
 
 static Node* compoundStmt(Token** Rest, Token* Tok) {
    Node Head = {};
@@ -112,9 +98,26 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
    *Rest = Tok->Next;
    return Nd;
 }
+static Node* stmt(Token** Rest, Token* Tok){
+    if(equal(Tok, "return")) {
+        Node* Nd = newUnary(ND_RETURN, expr(&Tok, Tok->Next));
+        *Rest = skip(Tok, ";");
+        return Nd;
+    }
+    if(equal(Tok, "{")) {
+        return compoundStmt(Rest, Tok->Next);
+    }
+    Node* Nd = exprStmt(Rest, Tok);
+    return Nd;
+}
 
 static Node* exprStmt(Token** Rest, Token* Tok) {
-   Node* Nd = newUnary(ND_EXPR_STMT, expr(&Tok, Tok));
+   //empty statment
+    if(equal(Tok, ";")) {
+        *Rest = Tok->Next;
+        return newNode(ND_BLOCK);
+    }
+    Node* Nd = newUnary(ND_EXPR_STMT, expr(&Tok, Tok));
    *Rest = skip(Tok, ";");
    return Nd;
 }

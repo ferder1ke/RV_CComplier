@@ -92,6 +92,6 @@ assert 3 '{ 1; 2; return 3; }'
 
 # [13] 支持{...}
 assert 3 '{ {1; {2;} return 3;} }'
-
+assert 5 '{ ;;; return 5; }'
 # 如果运行正常未提前退出，程序将显示OK
 echo OK
