@@ -104,12 +104,24 @@ static void genExpr(Node* AST) {
     error("invalid expression!");    
 }
 static void genStmt(Node *Nd) {
-    if(Nd->Kind == ND_EXPR_STMT) {
-        genExpr(Nd->LHS);
-        return;
-    }
-    error("invalid statement");
+  switch (Nd->Kind) {
+  // 生成return语句
+  case ND_RETURN:
+    genExpr(Nd->LHS);
+    // 无条件跳转语句，跳转到.L.return段
+    // j offset是 jal x0, offset的别名指令
+    printf("  j .L.return\n");
+    return;
+  // 生成表达式语句
+  case ND_EXPR_STMT:
+    genExpr(Nd->LHS);
+    return;
+  default:
+    break;
+  }
+  error("invalid statement");
 }
+
 void codegen(Function* prog) {
     assignLVarOffsets(prog);
     printf("  .globl main\n");
@@ -118,11 +130,12 @@ void codegen(Function* prog) {
     printf("  sd fp, 0(sp)\n");
     printf("  mv fp, sp\n");
 
-    printf("  addi sp, sp, %d\n", -prog->StackSize);
+    printf("  addi sp, sp, -%d\n", prog->StackSize);
     for(Node* N = prog->Body; N; N = N->Next){
         genStmt(N);
         assert(Depth == 0);
     }
+    printf(".L.return:\n");
     printf("  mv sp, fp\n");
     printf("  ld fp, 0(sp)\n");
     printf("  addi sp, sp, 8\n");

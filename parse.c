@@ -58,10 +58,12 @@ static Obj* newLVar(char* Name) {
 }
 
 // program = stmt*
-// stmt = exprStmt
+// stmt = "return" expr ";" | exprStmt
 // exprStmt = expr ";"
+
 // expr = assign
 // assign = equality ("=" assign)?
+
 // equality = relational ("==" relational | "!=" relational)*
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // add = mul ("+" mul | "-" mul)*
@@ -82,6 +84,11 @@ static Node* primary(Token** Rest, Token* Tok);
 static Node* unary(Token** Rest, Token* Tok);
 
 static Node* stmt(Token** Rest, Token* Tok){
+    if(equal(Tok, "return")) {
+        Node* Nd = newUnary(ND_RETURN, expr(&Tok, Tok->Next));
+        *Rest = skip(Tok, ";");
+        return Nd;
+    }
     Node* Nd = exprStmt(Rest, Tok);
     return Nd;
 }

@@ -58,6 +58,14 @@ static int readPunct(char* P) {
     return ispunct(*P) ? 1 : 0;
 }
 
+static void convertKeywords (Token* Tok) {
+    for(Token* Cur = Tok; Cur->Kind != TK_EOF; Cur = Cur->Next) {
+        if(equal(Cur, "return")) {
+            Cur->Kind = TK_KEYWORD;
+        }
+    }
+}
+
 Token* skip(Token* Tok, char* str) {
     if(!equal(Tok, str))
         errorTok(Tok, "expect '%s'", str);
@@ -128,6 +136,7 @@ Token* tokenize(char* P) {
    }
    
    cur->Next = genToken(TK_EOF, P, P);
+   convertKeywords(Head.Next); 
    return Head.Next;
 }
 
