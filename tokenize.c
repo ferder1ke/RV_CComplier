@@ -58,9 +58,18 @@ static int readPunct(char* P) {
     return ispunct(*P) ? 1 : 0;
 }
 
+static bool isKeyWord(Token* Tok) {
+    static char* Kw[] = {"return", "if", "else"};
+    for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); i++) {
+        if(equal(Tok, Kw[i]))
+            return true;
+    }
+    return false;
+}
+
 static void convertKeywords (Token* Tok) {
     for(Token* Cur = Tok; Cur->Kind != TK_EOF; Cur = Cur->Next) {
-        if(equal(Cur, "return")) {
+        if(isKeyWord(Tok)) {
             Cur->Kind = TK_KEYWORD;
         }
     }
@@ -93,6 +102,7 @@ static bool isIdent1(char C) {
 static bool isIdent2(char C) {
     return isIdent1(C) || ('0' <= C && C <= '9');
 }
+
 Token* tokenize(char* P) {
    currentInput = P;
    Token Head = {};

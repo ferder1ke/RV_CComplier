@@ -59,7 +59,10 @@ static Obj* newLVar(char* Name) {
 
 // program = "{" compoundStmt
 // compoundStmt = stmt* "}";
-// stmt = "return" expr ";" | "{"compoundStmt | exprStmt
+// stmt = "return" expr ";" 
+//       | "{"compoundStmt 
+//       | exprStmt
+//       | "if" "(" expr ")" stmt ("else" stmt)?
 // exprStmt = expr? ";"
 
 // expr = assign
@@ -104,6 +107,21 @@ static Node* stmt(Token** Rest, Token* Tok){
         *Rest = skip(Tok, ";");
         return Nd;
     }
+    
+    if(equal(Tok, "if")) {
+        Node* Nd = newNode(ND_IF);
+        Tok = skip(Tok->Next, "(");
+        Nd->Cond = expr(&Tok, Tok);
+        Tok = skip(Tok, ")");
+        Nd->Then = stmt(&Tok, Tok);
+        if(equal(Tok, "else")) {
+            Tok = skip(Tok, "else");
+            Nd->Els = stmt(&Tok, Tok);
+        }
+        *Rest = Tok;
+        return Nd;
+    }
+
     if(equal(Tok, "{")) {
         return compoundStmt(Rest, Tok->Next);
     }

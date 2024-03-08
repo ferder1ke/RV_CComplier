@@ -5,6 +5,12 @@
 > Description:   
  ************************************************************************/
 #include "rvcc.h"
+
+static int Count() {
+    static int I = 1;
+    return I++;
+}
+
 /*Code gen*/
 static int Depth;
 static void push(void) {
@@ -113,6 +119,21 @@ static void genStmt(Node *Nd) {
     printf("  j .L.return\n");
     return;
   // 生成表达式语句
+  case ND_IF: {
+    int C = Count();
+
+    genExpr(Nd->Cond);
+    printf("  beqz a0, .L.else.%d\n", C);
+    genStmt(Nd->Then);
+    printf("  j .L.end.%d\n", C);
+    printf(".L.else.%d:\n", C);
+    if(Nd->Els){
+        genStmt(Nd->Els);
+    }
+    printf(".L.end.%d:\n", C);
+    return;
+  }
+
   case ND_EXPR_STMT:
     genExpr(Nd->LHS);
     return;
