@@ -59,7 +59,7 @@ static int readPunct(char* P) {
 }
 
 static bool isKeyWord(Token* Tok) {
-    static char* Kw[] = {"return", "if", "else", "for" ,"while"};
+    static char* Kw[] = {"return", "if", "else", "for" ,"while", "int"};
     for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); i++) {
         if(equal(Tok, Kw[i]))
             return true;
@@ -80,6 +80,15 @@ Token* skip(Token* Tok, char* str) {
         errorTok(Tok, "expect '%s'", str);
     return Tok->Next;
 } 
+
+bool consume(Token** Rest, Token* Tok, char* Str) {
+    if(equal(Tok, Str)){
+        *Rest = Tok->Next;
+        return true;
+    }
+    *Rest = Tok;    
+    return false;
+}
 
 static int getNum(Token* Tok) {
     if(Tok->Kind != TK_NUM)

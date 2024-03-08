@@ -51,19 +51,21 @@ void addType(Node* Nd) {
         case ND_NE:
         case ND_LT:
         case ND_LE:
-        case ND_VAR:
         case ND_NUM:
             Nd->Ty = TypeInt;
+            return;
+
+        case ND_VAR:
+            Nd->Ty = Nd->Var->Ty;
             return;
 
         case ND_ADDR:
             Nd->Ty = pointerTo(Nd->LHS->Ty);
             return;
-        case ND_DEREF:
-            if(Nd->LHS->Ty->typeKind == TypePTR)
-                Nd->Ty = Nd->LHS->Ty->Base;
-            else
-                Nd->Ty = TypeInt;
+        case ND_DEREF: 
+            if(Nd->LHS->Ty->typeKind != TypePTR)
+                errorTok(Nd->Tok, "invalid pointer dereference");
+            Nd->Ty = Nd->LHS->Ty->Base;
             return;
         default:
             break;

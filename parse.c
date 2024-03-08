@@ -52,10 +52,11 @@ static Node* newVar(Obj* Var, Token* Tok) {
     return Nd;
 }
 
-static Obj* newLVar(char* Name) {
+static Obj* newLVar(char* Name, Type* Ty) {
     Obj* obj = calloc(1, sizeof(Obj));
     obj->Name = Name;
     obj->Next = Locals;
+    obj->Ty = Ty;
     Locals = obj;
     return obj;
 }
@@ -115,7 +116,12 @@ static Node* newSub(Node* LHS, Node* RHS, Token* Tok) {
 }
 
 // program = "{" compoundStmt
-// compoundStmt = stmt* "}";
+// compoundStmt = (declaration | stmt)* "}"
+// declaration =
+//    declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
+// declspec = "int"
+// declarator = "*"* ident
+
 // stmt = "return" expr ";" 
 //       | "{"compoundStmt 
 //       | exprStmt
@@ -136,6 +142,7 @@ static Node* newSub(Node* LHS, Node* RHS, Token* Tok) {
 //preorder
 
 static Node* compoundStmt(Token** Rest, Token* Tok);
+static Node* declaration(Token** Rest, Token* Tok);
 static Node* stmt(Token** Rest, Token* Tok);
 static Node* exprStmt(Token** Rest, Token* Tok);
 static Node* expr(Token** Rest, Token* Tok);
@@ -151,8 +158,13 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
    Node Head = {};
    Node* Cur = &Head;
    while(!equal(Tok, "}")) {
-       Cur->Next = stmt(&Tok, Tok);
-       Cur = Cur->Next;
+       if(equal(Tok, "int")) {
+           Cur->Next  = declaration(&Tok, Tok);
+           Cur = Cur->Next;
+       }else {
+           Cur->Next = stmt(&Tok, Tok);
+           Cur = Cur->Next;
+       }
        addType(Cur);
    }
    
@@ -161,6 +173,62 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
    *Rest = Tok->Next;
    return Nd;
 }
+
+Type* declspec(Token** Rest, Token* Tok) {
+    *Rest = skip(Tok, "int");
+    return TypeInt;
+}
+
+Type* declarator(Token** Rest, Token* Tok, Type* Ty) {
+    while(consume(&Tok, Tok, "*")) {
+        Ty = pointerTo(Ty);
+    }
+    if(Tok->Kind != TK_IDENT){
+        errorTok(Tok, "expected a varibles Name");
+    }
+    Ty->Name = Tok;
+    *Rest = Tok->Next;
+    return Ty;
+}
+
+static char* genIdent(Token* Tok) {
+    if(Tok->Kind != TK_IDENT)
+        errorTok(Tok, "expected identifier");
+    return strndup(Tok->Pos, Tok->Len);
+}
+
+static Node* declaration(Token** Rest, Token* Tok) {
+    Type* Basety = declspec(&Tok, Tok);
+    
+    Node Head = {};
+    Node* Cur = &Head;
+    
+    int I = 0;
+
+    while(!equal(Tok, ";")) {
+        if(I++ > 0) {
+            Tok = skip(Tok, ",");
+        }
+        
+        Type* Ty = declarator(&Tok, Tok, Basety);
+        Obj* Var = newLVar(genIdent(Ty->Name), Ty);//regist varibles
+
+        if(!equal(Tok, "="))
+            continue;
+        
+        Node* LHS = newVar(Var, Ty->Name);
+        Node* RHS = assign(&Tok, Tok->Next);
+        Node* Nd = newBinary(ND_ASSIGN, LHS, RHS, Tok);
+        
+        Cur->Next = newUnary(ND_EXPR_STMT, Nd, Tok);
+        Cur = Cur->Next;
+    }
+    Node* Nd = newNode(ND_BLOCK, Tok);
+    Nd->Body = Head.Next;
+    *Rest = Tok->Next;
+    return Nd;
+}
+
 
 static Node* stmt(Token** Rest, Token* Tok){
     if(equal(Tok, "return")) {
@@ -332,7 +400,7 @@ static Node* primary(Token** Rest, Token* Tok) {
     }else if(Tok->Kind == TK_IDENT) {
         Obj* Var = findVar(Tok);
         if(!Var){
-            Var = newLVar(strndup(Tok->Pos, Tok->Len));
+            errorTok(Tok, "undefined varibles");
         }
         *Rest = Tok->Next;
         return newVar(Var, Tok);

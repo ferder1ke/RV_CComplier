@@ -32,6 +32,7 @@ struct Token{
     char* Pos; 
 };
 
+bool consume(Token** Rest, Token* Tok, char* Str);
 void error(char* Fmt, ...); 
 void errorAt(char *Loc, char *Fmt, ...);
 void errorTok(Token *Tok, char *Fmt, ...);
@@ -39,12 +40,26 @@ bool equal(Token *Tok, char *Str);
 Token *skip(Token *Tok, char *Str);
 Token *tokenize(char *Input);
 
+typedef enum {
+    TypeINT, //int
+    TypePTR, //pointer
+}TypeKind;
+
+
+typedef struct Type Type;
+
+struct Type {
+    TypeKind typeKind;
+    Type* Base;
+    Token* Name;
+};
 typedef struct Node Node;
 
 typedef struct Obj Obj;
-struct Obj {
+struct Obj {// Varibles
   Obj *Next; 
   char *Name; 
+  Type* Ty;
   int Offset; 
 };
 
@@ -78,20 +93,10 @@ typedef enum {
     ND_DEREF        // *
 } NodeKind;
 
-typedef enum {
-    TypeINT, //int
-    TypePTR, //pointer
-}TypeKind;
-
-
-typedef struct Type Type;
-
-struct Type {
-    TypeKind typeKind;
-    Type* Base;
-};
 
 extern Type* TypeInt;
+
+Type* pointerTo(Type* Base);
 
 typedef struct Node Node;
 struct Node{
