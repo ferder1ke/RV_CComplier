@@ -64,6 +64,7 @@ static Obj* newLVar(char* Name) {
 //       | exprStmt
 //       | "if" "(" expr ")" stmt ("else" stmt)?
 //       | "for" "(" exprStmt expr? ";" expr? ")" stmt  
+//       | "while" "(" expr ")" stmt  
 // exprStmt = expr? ";"
 
 // expr = assign
@@ -108,7 +109,18 @@ static Node* stmt(Token** Rest, Token* Tok){
         *Rest = skip(Tok, ";");
         return Nd;
     }
-    
+
+
+    if(equal(Tok, "while")) {
+        Node* Nd = newNode(ND_FOR);
+        Tok = skip(Tok->Next, "(");
+        Nd->Cond = expr(&Tok, Tok);
+        Tok = skip(Tok, ")");
+        Nd->Then = stmt(&Tok, Tok);
+        *Rest = Tok;
+        return Nd;
+    }
+
     if(equal(Tok, "for")) {
         Node* Nd = newNode(ND_FOR);
         Tok = skip(Tok->Next, "(");

@@ -121,8 +121,9 @@ static void genStmt(Node *Nd) {
   // 生成表达式语句
   case ND_FOR: {
     int C = Count();
-
-    genStmt(Nd->Init);
+    
+    if(Nd->Init)
+        genStmt(Nd->Init);
     printf(".L.begin.%d:\n", C);
     
     if(Nd->Cond) {
