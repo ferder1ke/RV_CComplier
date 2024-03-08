@@ -77,7 +77,7 @@ static Obj* newLVar(char* Name) {
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // add = mul ("+" mul | "-" mul)*
 //mul = unary ("*" unary | "/" unary)*
-//unary = (+ | -) unary |  primary 
+//unary = (+ | - | * | &) unary |  primary 
 //primary = "(" expr ")" | num | ident
 //preorder
 
@@ -259,7 +259,12 @@ static Node* unary(Token** Rest, Token* Tok) {
        return unary(Rest, Tok->Next);    
     }else if(equal(Tok, "-")) {
        return newUnary(ND_NEG, unary(Rest, Tok->Next), Tok);
+    }else if(equal(Tok, "&")) {
+       return newUnary(ND_ADDR, unary(Rest, Tok->Next), Tok);
+    }else if(equal(Tok, "*")) {
+       return newUnary(ND_DEREF, unary(Rest, Tok->Next), Tok);
     }
+
     return primary(Rest, Tok);
 }
 

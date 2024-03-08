@@ -71,9 +71,11 @@ typedef enum {
     ND_ASSIGN,      // assign
     ND_VAR,         // var
     ND_RETURN,      // return
-    ND_BLOCK,       //code block
-    ND_IF,         //'if' statement
-    ND_FOR          //'for' statement
+    ND_BLOCK,       // code block
+    ND_IF,          // 'if' statement
+    ND_FOR,         // 'for' statement
+    ND_ADDR,        // &
+    ND_DEREF        // *
 } NodeKind;
 
 typedef struct Node Node;

@@ -6,6 +6,8 @@
  ************************************************************************/
 #include "rvcc.h"
 
+static void genExpr(Node *Nd);
+
 // 记录栈深度
 static int Depth;
 
@@ -43,13 +45,19 @@ static int alignTo(int N, int Align) {
 // 计算给定节点的绝对地址
 // 如果报错，说明节点不在内存中
 static void genAddr(Node *Nd) {
-  if (Nd->Kind == ND_VAR) {
-    // 偏移量是相对于fp的
-    printf("  # 获取变量%s的栈内地址为%d(fp)\n", Nd->Var->Name,
-           Nd->Var->Offset);
-    printf("  addi a0, fp, %d\n", Nd->Var->Offset);
-    return;
-  }
+    switch(Nd->Kind) {
+        case ND_VAR:
+            printf("  # 获取变量%s的栈内地址为%d(fp)\n", Nd->Var->Name,
+                   Nd->Var->Offset);
+            printf("  addi a0, fp, %d\n", Nd->Var->Offset);
+        return;
+        case ND_DEREF:
+            genExpr(Nd->LHS);
+            return;
+        default:
+            break;
+
+    }
   errorTok(Nd->Tok, "not an lvalue");
 }
 
@@ -87,6 +95,14 @@ static void genExpr(Node *Nd) {
     pop("a1");
     printf("  # 将a0的值，写入到a1中存放的地址\n");
     printf("  sd a0, 0(a1)\n");
+    return;
+  case ND_DEREF:
+    genExpr(Nd->LHS);
+    printf("  # 读取a0中存放的地址，得到的值存入a0\n");
+    printf("  ld a0, 0(a0)\n");
+    return;
+  case ND_ADDR:
+    genAddr(Nd->LHS);
     return;
   default:
     break;
