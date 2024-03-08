@@ -72,7 +72,8 @@ typedef enum {
     ND_VAR,         // var
     ND_RETURN,      // return
     ND_BLOCK,       //code block
-    ND_IF           //'if' statement
+    ND_IF,         //'if' statement
+    ND_FOR          //'for' statement
 } NodeKind;
 
 typedef struct Node Node;
@@ -88,6 +89,8 @@ struct Node{
     Node* Cond;
     Node* Els;
     Node* Then;
+    Node* Init;
+    Node* Inc;
 };
 
 Function *parse(Token *Tok);

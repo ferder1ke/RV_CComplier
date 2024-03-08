@@ -63,6 +63,7 @@ static Obj* newLVar(char* Name) {
 //       | "{"compoundStmt 
 //       | exprStmt
 //       | "if" "(" expr ")" stmt ("else" stmt)?
+//       | "for" "(" exprStmt expr? ";" expr? ")" stmt  
 // exprStmt = expr? ";"
 
 // expr = assign
@@ -105,6 +106,25 @@ static Node* stmt(Token** Rest, Token* Tok){
     if(equal(Tok, "return")) {
         Node* Nd = newUnary(ND_RETURN, expr(&Tok, Tok->Next));
         *Rest = skip(Tok, ";");
+        return Nd;
+    }
+    
+    if(equal(Tok, "for")) {
+        Node* Nd = newNode(ND_FOR);
+        Tok = skip(Tok->Next, "(");
+       
+        Nd->Init = exprStmt(&Tok, Tok);
+        
+        if(!equal(Tok, ";"))
+            Nd->Cond = expr(&Tok, Tok);
+        Tok = skip(Tok, ";");
+
+        if(!equal(Tok, ")"))
+            Nd->Inc = expr(&Tok, Tok);
+        Tok = skip(Tok, ")");
+        
+        Nd->Then = stmt(&Tok, Tok);
+        *Rest = Tok;
         return Nd;
     }
     

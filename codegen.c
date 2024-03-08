@@ -119,6 +119,28 @@ static void genStmt(Node *Nd) {
     printf("  j .L.return\n");
     return;
   // 生成表达式语句
+  case ND_FOR: {
+    int C = Count();
+
+    genStmt(Nd->Init);
+    printf(".L.begin.%d:\n", C);
+    
+    if(Nd->Cond) {
+        genExpr(Nd->Cond);
+        printf("  beqz a0, .L.end.%d\n", C);
+    }
+    
+    genStmt(Nd->Then);
+    
+    if(Nd->Inc) {
+        genExpr(Nd->Inc);
+    }
+    
+    printf("  j .L.begin.%d\n", C);
+    printf(".L.end.%d:\n", C);
+    return;
+  }
+
   case ND_IF: {
     int C = Count();
 
