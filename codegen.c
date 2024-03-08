@@ -50,8 +50,7 @@ static void genAddr(Node *Nd) {
     printf("  addi a0, fp, %d\n", Nd->Var->Offset);
     return;
   }
-
-  error("not an lvalue");
+  errorTok(Nd->Tok, "not an lvalue");
 }
 
 // 生成表达式
@@ -151,8 +150,7 @@ static void genExpr(Node *Nd) {
   default:
     break;
   }
-
-  error("invalid expression");
+  errorTok(Nd->Tok, "invalid expression"); 
 }
 
 // 生成语句
@@ -247,8 +245,7 @@ static void genStmt(Node *Nd) {
   default:
     break;
   }
-
-  error("invalid statement");
+  errorTok(Nd->Tok, "invalid statement");
 }
 
 // 根据变量的链表计算出偏移量

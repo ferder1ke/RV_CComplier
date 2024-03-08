@@ -91,6 +91,7 @@ struct Node{
     Node* Then;
     Node* Init;
     Node* Inc;
+    Token* Tok;
 };
 
 Function *parse(Token *Tok);
