@@ -60,6 +60,60 @@ static Obj* newLVar(char* Name) {
     return obj;
 }
 
+static Node* newAdd(Node* LHS, Node* RHS, Token* Tok) {
+    addType(LHS);
+    addType(RHS);
+
+    //num + num
+    if(isInteger(LHS->Ty) && isInteger(RHS->Ty)) {
+        return newBinary(ND_ADD, LHS, RHS, Tok);
+    }
+
+    if (LHS->Ty->Base && RHS->Ty->Base)
+        errorTok(Tok, "invalid operands");
+    
+    //num + ptr
+    if(!LHS->Ty->Base && RHS->Ty->Base) {
+        Node* tmp;
+        tmp = RHS;
+        RHS = LHS;
+        LHS = tmp;
+    }
+
+    //ptr + num
+    RHS = newBinary(ND_MUL, RHS, newNum(8, Tok), Tok);
+    return newBinary(ND_ADD, LHS, RHS, Tok);
+}
+
+static Node* newSub(Node* LHS, Node* RHS, Token* Tok) {
+    addType(LHS);
+    addType(RHS);
+
+    //num - num
+    if(isInteger(LHS->Ty) && isInteger(RHS->Ty)) {
+        return newBinary(ND_SUB, LHS, RHS, Tok);
+    }
+
+    //ptr -  num
+    if(LHS->Ty->Base && isInteger(RHS->Ty)) {
+        RHS = newBinary(ND_MUL, RHS, newNum(8, Tok), Tok);
+        addType(RHS);
+        Node *Nd = newBinary(ND_SUB, LHS, RHS, Tok);
+        Nd->Ty = LHS->Ty;
+        return Nd;
+    }
+
+    //ptr - ptr
+    if(LHS->Ty->Base && RHS->Ty->Base) {
+        
+        Node *Nd = newBinary(ND_SUB, LHS, RHS, Tok);
+        Nd->Ty = TypeInt;
+        return newBinary(ND_DIV, Nd, newNum(8, Tok), Tok);
+    }
+    errorTok(Tok, "invalid operands");
+    return NULL;
+}
+
 // program = "{" compoundStmt
 // compoundStmt = stmt* "}";
 // stmt = "return" expr ";" 
@@ -99,6 +153,7 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
    while(!equal(Tok, "}")) {
        Cur->Next = stmt(&Tok, Tok);
        Cur = Cur->Next;
+       addType(Cur);
    }
    
    Node* Nd = newNode(ND_BLOCK, Tok);
@@ -106,6 +161,7 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
    *Rest = Tok->Next;
    return Nd;
 }
+
 static Node* stmt(Token** Rest, Token* Tok){
     if(equal(Tok, "return")) {
         Node* Nd = newUnary(ND_RETURN, expr(&Tok, Tok->Next), Tok);
@@ -228,10 +284,10 @@ static Node* add(Token** Rest, Token* Tok) {
     Node* Nd = mul(&Tok, Tok);
     while(1) {
         if(equal(Tok, "+")) {
-            Nd = newBinary(ND_ADD, Nd, mul(&Tok, Tok->Next), Tok);
+            Nd = newAdd(Nd, mul(&Tok, Tok->Next), Tok);
             continue;
         }else if(equal(Tok, "-")) {
-            Nd = newBinary(ND_SUB, Nd, mul(&Tok, Tok->Next), Tok);
+            Nd = newSub(Nd, mul(&Tok, Tok->Next), Tok);
             continue;
         }
         *Rest = Tok;

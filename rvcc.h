@@ -78,6 +78,21 @@ typedef enum {
     ND_DEREF        // *
 } NodeKind;
 
+typedef enum {
+    TypeINT, //int
+    TypePTR, //pointer
+}TypeKind;
+
+
+typedef struct Type Type;
+
+struct Type {
+    TypeKind typeKind;
+    Type* Base;
+};
+
+extern Type* TypeInt;
+
 typedef struct Node Node;
 struct Node{
     NodeKind Kind;
@@ -94,7 +109,12 @@ struct Node{
     Node* Init;
     Node* Inc;
     Token* Tok;
+    Type* Ty;
 };
+
+bool isInteger(Type *TY);
+
+void addType(Node* Nd);
 
 Function *parse(Token *Tok);
 void codegen(Function* Prog);
