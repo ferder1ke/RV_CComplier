@@ -73,8 +73,8 @@ Type* declarator(Token** Rest, Token* Tok, Type* Ty) {
     if(Tok->Kind != TK_IDENT){
         errorTok(Tok, "expected a varibles Name");
     }
+    Ty = typeSuffix(Rest, Tok->Next, Ty);
     Ty->Name = Tok;
-    *Rest = Tok->Next;
     return Ty;
 }
 
@@ -138,12 +138,25 @@ static Node* newSub(Node* LHS, Node* RHS, Token* Tok) {
     return NULL;
 }
 
+static Type* typeSuffix(Token** Rest, Token* Tok, Type* ReturnTy) {
+    if(equal(Tok, "(")) {
+        *Rest = skip(Tok->Next, ")");
+        return funcType(ReturnTy);
+    }
+    *Rest = Tok;
+    return ReturnTy;
+}
+
+// program = functionDefinition*
+// functionDefinition = declspec declarator "{" compoundStmt*
+// declspec = "int"
+// declarator = "*"* ident typeSuffix
+// typeSuffix = ("(" ")")?
+
 // program = "{" compoundStmt
 // compoundStmt = (declaration | stmt)* "}"
 // declaration =
 //    declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
-// declspec = "int"
-// declarator = "*"* ident
 
 // stmt = "return" expr ";" 
 //       | "{"compoundStmt 
@@ -438,11 +451,25 @@ static Node* funcall(Token** Rest, Token* Tok) {
     return Nd;
 }
 
+static Function* function(Token** Rest, Token* Tok) {
+    Type* Ty = declspec(&Tok, Tok);
+    Ty = declarator(&Tok, Tok, Ty);
+
+    Function* func = calloc(1, sizeof(Function));
+    Locals = NULL;
+
+    func->Name = genIdent(Ty->Name);
+    Tok = skip(Tok, "{");
+    func->Body = compoundStmt(Rest, Tok);
+    func->Locals = Locals;
+    return func;
+}
 
 Function* parse(Token *Tok) {
-    Tok = skip(Tok, "{");
-    Function* prog = calloc(1, sizeof(Function));
-    prog->Body = compoundStmt(&Tok, Tok);
-    prog->Locals = Locals;
-    return prog;
+    Function Head = {};
+    Function* CurFunc = &Head;
+    while(Tok->Kind != TK_EOF) {
+        CurFunc = CurFunc->Next = function(&Tok, Tok);
+    }
+    return Head.Next;
 }

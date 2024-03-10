@@ -8,6 +8,8 @@
 
 /*Lexical analysis*/
 static char* currentInput;
+static Function *CurrentFn;
+
 void error(char* Fmt, ...) {
     va_list VA;
     va_start(VA, Fmt);
@@ -69,7 +71,7 @@ static bool isKeyWord(Token* Tok) {
 
 static void convertKeywords (Token* Tok) {
     for(Token* Cur = Tok; Cur->Kind != TK_EOF; Cur = Cur->Next) {
-        if(isKeyWord(Tok)) {
+        if(isKeyWord(Cur)) {
             Cur->Kind = TK_KEYWORD;
         }
     }

@@ -19,7 +19,12 @@ Type* pointerTo(Type* Base) {
     Ty->Base = Base;
     return Ty;
 }
-
+Type* funcType(Type* ReturnTy) {
+    Type* Ty = calloc(1, sizeof(Type));
+    Ty->typeKind = TypeFunc;
+    Ty->ReturnTy = ReturnTy;
+    return Ty;
+}
 void addType(Node* Nd) {
     if(!Nd || Nd->Ty) {
         return;
@@ -72,6 +77,5 @@ void addType(Node* Nd) {
         default:
             break;
     }
-
 }
 

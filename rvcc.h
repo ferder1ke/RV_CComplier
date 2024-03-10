@@ -45,6 +45,7 @@ Token *tokenize(char *Input);
 typedef enum {
     TypeINT, //int
     TypePTR, //pointer
+    TypeFunc //Function
 }TypeKind;
 
 
@@ -54,6 +55,7 @@ struct Type {
     TypeKind typeKind;
     Type* Base;
     Token* Name;
+    Type* ReturnTy;
 };
 typedef struct Node Node;
 
@@ -70,6 +72,8 @@ struct Function {
   Node *Body;    
   Obj *Locals;  
   int StackSize;
+  Function* Next;
+  char* Name;
 };
 
 /*semantic analysis*/
@@ -126,6 +130,7 @@ struct Node{
 bool isInteger(Type *TY);
 
 void addType(Node* Nd);
-
+Type* funcType(Type* ReturnTy);
 Function *parse(Token *Tok);
 void codegen(Function* Prog);
+static Type* typeSuffix(Token** Rest, Token* Tok, Type* ReturnTy); 
