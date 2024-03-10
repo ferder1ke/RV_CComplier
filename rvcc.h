@@ -14,6 +14,8 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
+static char *ArgReg[] = {"a0", "a1", "a2", "a3", "a4", "a5"};
+
 typedef enum {
     TK_PUNCT,
     TK_NUM,
@@ -110,6 +112,7 @@ struct Node{
     Node* Body;
     
     char* FuncName;
+    Node* Args;
 
     Node* Cond;
     Node* Els;

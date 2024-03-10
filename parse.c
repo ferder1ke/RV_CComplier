@@ -161,7 +161,8 @@ static Node* newSub(Node* LHS, Node* RHS, Token* Tok) {
 // add = mul ("+" mul | "-" mul)*
 //mul = unary ("*" unary | "/" unary)*
 //unary = (+ | - | * | &) unary |  primary 
-//primary = "(" expr ")" | num | ident args?
+//primary = "(" expr ")" | num | ident func-args?
+//funcall = indent "("(assign (, assign)?)?")"
 //preorder
 
 static Node* compoundStmt(Token** Rest, Token* Tok);
@@ -176,6 +177,7 @@ static Node* add(Token** Rest, Token* Tok);
 static Node* mul(Token** Rest, Token* Tok);
 static Node* primary(Token** Rest, Token* Tok);
 static Node* unary(Token** Rest, Token* Tok);
+static Node* funcall(Token** Rest, Token* Tok);
 
 static Node* compoundStmt(Token** Rest, Token* Tok) {
    Node Head = {};
@@ -399,10 +401,7 @@ static Node* primary(Token** Rest, Token* Tok) {
         return Nd;
     }else if(Tok->Kind == TK_IDENT) {
         if(equal(Tok->Next, "(")) {//args
-            Node* Nd = newNode(ND_FUNCALL, Tok);
-            Nd->FuncName = strndup(Tok->Pos, Tok->Len);
-            *Rest = skip(Tok->Next->Next, ")");
-            return Nd;
+            return funcall(Rest, Tok);
         }
         Obj* Var = findVar(Tok);
         if(!Var){
@@ -418,6 +417,27 @@ static Node* primary(Token** Rest, Token* Tok) {
     errorTok(Tok, "unexpected an expression");
     return NULL;
 }
+
+static Node* funcall(Token** Rest, Token* Tok) {
+    Token* Start = Tok;
+    Node Head = {};
+    Node* Cur = &Head;
+
+    Tok = Tok->Next->Next;
+    while(!equal(Tok, ")")) {
+        if(Cur != &Head) {
+            Tok = skip(Tok, ",");
+        }
+        Cur->Next = assign(&Tok, Tok);
+        Cur = Cur->Next;
+    }
+    Node* Nd = newNode(ND_FUNCALL, Start);
+    Nd->FuncName = strndup(Start->Pos, Start->Len);
+    Nd->Args = Head.Next;
+    *Rest = skip(Tok, ")");
+    return Nd;
+}
+
 
 Function* parse(Token *Tok) {
     Tok = skip(Tok, "{");

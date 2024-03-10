@@ -101,9 +101,19 @@ static void genExpr(Node *Nd) {
     printf("  # 读取a0中存放的地址，得到的值存入a0\n");
     printf("  ld a0, 0(a0)\n");
     return;
-  case ND_FUNCALL:
-    printf("  call %s\n", Nd->FuncName);
-    return;
+  case ND_FUNCALL: {
+        int NArgs = 0;
+        for(Node* Arg = Nd->Args; Arg; Arg = Arg->Next) {
+            genExpr(Arg);
+            push();
+            ++NArgs;
+        }
+        for(int i = NArgs - 1; i >= 0; --i){
+            pop(ArgReg[i]);
+        }
+        printf("  call %s\n", Nd->FuncName);
+        return;
+    }
   case ND_ADDR:
     genAddr(Nd->LHS);
     return;
