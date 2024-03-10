@@ -61,6 +61,29 @@ static Obj* newLVar(char* Name, Type* Ty) {
     return obj;
 }
 
+Type* declspec(Token** Rest, Token* Tok) {
+    *Rest = skip(Tok, "int");
+    return TypeInt;
+}
+
+Type* declarator(Token** Rest, Token* Tok, Type* Ty) {
+    while(consume(&Tok, Tok, "*")) {
+        Ty = pointerTo(Ty);
+    }
+    if(Tok->Kind != TK_IDENT){
+        errorTok(Tok, "expected a varibles Name");
+    }
+    Ty->Name = Tok;
+    *Rest = Tok->Next;
+    return Ty;
+}
+
+static char* genIdent(Token* Tok) {
+    if(Tok->Kind != TK_IDENT)
+        errorTok(Tok, "expected identifier");
+    return strndup(Tok->Pos, Tok->Len);
+}
+
 static Node* newAdd(Node* LHS, Node* RHS, Token* Tok) {
     addType(LHS);
     addType(RHS);
@@ -138,7 +161,7 @@ static Node* newSub(Node* LHS, Node* RHS, Token* Tok) {
 // add = mul ("+" mul | "-" mul)*
 //mul = unary ("*" unary | "/" unary)*
 //unary = (+ | - | * | &) unary |  primary 
-//primary = "(" expr ")" | num | ident
+//primary = "(" expr ")" | num | ident args?
 //preorder
 
 static Node* compoundStmt(Token** Rest, Token* Tok);
@@ -172,29 +195,6 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
    Nd->Body = Head.Next;
    *Rest = Tok->Next;
    return Nd;
-}
-
-Type* declspec(Token** Rest, Token* Tok) {
-    *Rest = skip(Tok, "int");
-    return TypeInt;
-}
-
-Type* declarator(Token** Rest, Token* Tok, Type* Ty) {
-    while(consume(&Tok, Tok, "*")) {
-        Ty = pointerTo(Ty);
-    }
-    if(Tok->Kind != TK_IDENT){
-        errorTok(Tok, "expected a varibles Name");
-    }
-    Ty->Name = Tok;
-    *Rest = Tok->Next;
-    return Ty;
-}
-
-static char* genIdent(Token* Tok) {
-    if(Tok->Kind != TK_IDENT)
-        errorTok(Tok, "expected identifier");
-    return strndup(Tok->Pos, Tok->Len);
 }
 
 static Node* declaration(Token** Rest, Token* Tok) {
@@ -398,6 +398,12 @@ static Node* primary(Token** Rest, Token* Tok) {
         *Rest = skip(Tok, ")");
         return Nd;
     }else if(Tok->Kind == TK_IDENT) {
+        if(equal(Tok->Next, "(")) {//args
+            Node* Nd = newNode(ND_FUNCALL, Tok);
+            Nd->FuncName = strndup(Tok->Pos, Tok->Len);
+            *Rest = skip(Tok->Next->Next, ")");
+            return Nd;
+        }
         Obj* Var = findVar(Tok);
         if(!Var){
             errorTok(Tok, "undefined varibles");

@@ -101,6 +101,9 @@ static void genExpr(Node *Nd) {
     printf("  # 读取a0中存放的地址，得到的值存入a0\n");
     printf("  ld a0, 0(a0)\n");
     return;
+  case ND_FUNCALL:
+    printf("  call %s\n", Nd->FuncName);
+    return;
   case ND_ADDR:
     genAddr(Nd->LHS);
     return;
@@ -298,8 +301,10 @@ void codegen(Function *Prog) {
 
   // Prologue, 前言
   // 将fp压入栈中，保存fp的值
+  printf("  # 将ra寄存器压栈,保存ra的值\n");
+  printf("  addi sp, sp, -16\n");
+  printf("  sd ra, 8(sp)\n");
   printf("  # 将fp压栈，fp属于“被调用者保存”的寄存器，需要恢复原值\n");
-  printf("  addi sp, sp, -8\n");
   printf("  sd fp, 0(sp)\n");
   // 将sp写入fp
   printf("  # 将sp的值写入fp\n");
@@ -325,7 +330,9 @@ void codegen(Function *Prog) {
   // 将最早fp保存的值弹栈，恢复fp。
   printf("  # 将最早fp保存的值弹栈，恢复fp和sp\n");
   printf("  ld fp, 0(sp)\n");
-  printf("  addi sp, sp, 8\n");
+  printf("  # 将ra寄存器弹栈,恢复ra的值\n");
+  printf("  ld ra, 8(sp)\n");
+  printf("  addi sp, sp, 16\n");
   // 返回
   printf("  # 返回a0值给系统调用\n");
   printf("  ret\n");

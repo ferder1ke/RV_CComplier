@@ -67,6 +67,8 @@ void addType(Node* Nd) {
                 errorTok(Nd->Tok, "invalid pointer dereference");
             Nd->Ty = Nd->LHS->Ty->Base;
             return;
+        case ND_FUNCALL:
+            Nd->Ty = TypeInt;
         default:
             break;
     }

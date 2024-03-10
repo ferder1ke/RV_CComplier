@@ -90,7 +90,8 @@ typedef enum {
     ND_IF,          // 'if' statement
     ND_FOR,         // 'for' statement
     ND_ADDR,        // &
-    ND_DEREF        // *
+    ND_DEREF,        // *
+    ND_FUNCALL      // Function calloc
 } NodeKind;
 
 
@@ -108,6 +109,8 @@ struct Node{
     Obj*  Var;
     Node* Body;
     
+    char* FuncName;
+
     Node* Cond;
     Node* Els;
     Node* Then;
