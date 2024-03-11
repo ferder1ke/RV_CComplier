@@ -217,7 +217,8 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // add = mul ("+" mul | "-" mul)*
 //mul = unary ("*" unary | "/" unary)*
-//unary = (+ | - | * | &) unary |  primary 
+//unary = (+ | - | * | &) unary |  postfix
+//postfix = primary ("[" expr "]")*
 //primary = "(" expr ")" | num | ident func-args?
 //funcall = indent "("(assign (, assign)?)?")"
 //preorder
@@ -233,6 +234,7 @@ static Node* relational(Token** Rest, Token* Tok);
 static Node* add(Token** Rest, Token* Tok);
 static Node* mul(Token** Rest, Token* Tok);
 static Node* primary(Token** Rest, Token* Tok);
+static Node* postfix(Token** Rest, Token* Tok);
 static Node* unary(Token** Rest, Token* Tok);
 static Node* funcall(Token** Rest, Token* Tok);
 
@@ -447,7 +449,20 @@ static Node* unary(Token** Rest, Token* Tok) {
        return newUnary(ND_DEREF, unary(Rest, Tok->Next), Tok);
     }
 
-    return primary(Rest, Tok);
+    return postfix(Rest, Tok);
+}
+
+
+static Node* postfix(Token** Rest, Token* Tok) {
+    Node* Nd =  primary(&Tok, Tok);
+    while(equal(Tok, "[")) {
+        Token* Start = Tok;
+        Node* Idx = expr(&Tok, Tok->Next);
+        Tok = skip(Tok, "]");
+        Nd = newUnary(ND_DEREF, newAdd(Nd, Idx, Start), Start);
+    }
+    *Rest = Tok;
+    return Nd;
 }
 
 static Node* primary(Token** Rest, Token* Tok) {
