@@ -56,6 +56,9 @@ struct Type {
     Type* Base;
     Token* Name;
     Type* ReturnTy;
+    
+    Type* Param;
+    Type* Next;
 };
 typedef struct Node Node;
 
@@ -69,11 +72,13 @@ struct Obj {// Varibles
 
 typedef struct Function Function;
 struct Function {
-  Node *Body;    
-  Obj *Locals;  
-  int StackSize;
   Function* Next;
   char* Name;
+  Obj* Param;
+
+  Node *Body;    
+  Obj *Locals; 
+  int StackSize;
 };
 
 /*semantic analysis*/
@@ -129,6 +134,7 @@ struct Node{
 
 bool isInteger(Type *TY);
 
+Type *copyType(Type *Ty);
 void addType(Node* Nd);
 Type* funcType(Type* ReturnTy);
 Function *parse(Token *Tok);

@@ -13,6 +13,11 @@ bool isInteger(Type* TY) {
     return TY->typeKind == TypeINT;
 }
 
+Type* copyType(Type* Ty) {
+    Type* Ret = calloc(1, sizeof(Type));
+    *Ret = *Ty;
+    return Ret;
+}
 Type* pointerTo(Type* Base) {
     Type* Ty = calloc(1, sizeof(Type));
     Ty->typeKind = TypePTR;
@@ -39,6 +44,10 @@ void addType(Node* Nd) {
     addType(Nd->Inc);
    
     for(Node* Cur = Nd->Body; Cur; Cur = Cur->Next) {
+        addType(Cur);
+    }
+
+    for(Node* Cur = Nd->Args; Cur; Cur = Cur->Next) {
         addType(Cur);
     }
 

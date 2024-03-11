@@ -138,20 +138,21 @@ static Node* newSub(Node* LHS, Node* RHS, Token* Tok) {
     return NULL;
 }
 
-static Type* typeSuffix(Token** Rest, Token* Tok, Type* ReturnTy) {
-    if(equal(Tok, "(")) {
-        *Rest = skip(Tok->Next, ")");
-        return funcType(ReturnTy);
+static void createParamLVars(Type* Param) {
+    if(Param) {
+        createParamLVars(Param->Next);
+        newLVar(genIdent(Param->Name), Param);
     }
-    *Rest = Tok;
-    return ReturnTy;
 }
 
 // program = functionDefinition*
 // functionDefinition = declspec declarator "{" compoundStmt*
 // declspec = "int"
 // declarator = "*"* ident typeSuffix
-// typeSuffix = ("(" ")")?
+// typeSuffix = ("(" funcParams? ")")?
+// funcParams = param ("," param)*
+// param = declspec declarator
+
 
 // program = "{" compoundStmt
 // compoundStmt = (declaration | stmt)* "}"
@@ -244,6 +245,29 @@ static Node* declaration(Token** Rest, Token* Tok) {
     return Nd;
 }
 
+static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
+    if(equal(Tok, "(")) {
+       Tok = Tok->Next;
+       Type Head = {};
+       Type* Cur = &Head;
+       while(!equal(Tok, ")")) {
+           if(Cur != &Head)
+               Tok = skip(Tok, ",");
+           Type* BaseTy = declspec(&Tok, Tok);
+           Type* DeclarTy = declarator(&Tok, Tok, BaseTy);
+           Cur->Next = copyType(DeclarTy);
+           Cur = Cur->Next;
+       }
+       
+       Ty = funcType(Ty);
+
+       Ty->Param = Head.Next;
+       *Rest = Tok->Next;
+       return Ty;
+    }
+    *Rest = Tok;
+    return Ty;
+}
 
 static Node* stmt(Token** Rest, Token* Tok){
     if(equal(Tok, "return")) {
@@ -460,6 +484,11 @@ static Function* function(Token** Rest, Token* Tok) {
 
     func->Name = genIdent(Ty->Name);
     Tok = skip(Tok, "{");
+    
+    createParamLVars(Ty->Param);
+    func->Param = Locals;
+   
+
     func->Body = compoundStmt(Rest, Tok);
     func->Locals = Locals;
     return func;
