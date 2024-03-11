@@ -43,9 +43,10 @@ Token *skip(Token *Tok, char *Str);
 Token *tokenize(char *Input);
 
 typedef enum {
-    TypeINT, //int
-    TypePTR, //pointer
-    TypeFunc //Function
+    TypeINT,  //int
+    TypePTR,  //pointer
+    TypeFunc, //Function
+    TypeARRAY //Arrary
 }TypeKind;
 
 
@@ -53,10 +54,14 @@ typedef struct Type Type;
 
 struct Type {
     TypeKind typeKind;
+    int Size;
+    
     Type* Base;
     Token* Name;
-    Type* ReturnTy;
     
+    int ArraryLen;
+    
+    Type* ReturnTy;
     Type* Param;
     Type* Next;
 };
@@ -139,4 +144,5 @@ void addType(Node* Nd);
 Type* funcType(Type* ReturnTy);
 Function *parse(Token *Tok);
 void codegen(Function* Prog);
-static Type* typeSuffix(Token** Rest, Token* Tok, Type* ReturnTy); 
+static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty); 
+Type* arrayof(Type* Base, int Size);

@@ -18,6 +18,12 @@ static Obj* findVar(Token* Tok) {
     return NULL;
 }
 
+static int getNumber(Token* Tok) {
+    if(Tok->Kind != TK_NUM)
+        errorTok(Tok, "expected number");
+    return Tok->Val;    
+}
+
 static Node* newNode(NodeKind Kind,Token* Tok) {
     Node* Nd = calloc(1, sizeof(Node));
     Nd->Kind = Kind;
@@ -105,7 +111,7 @@ static Node* newAdd(Node* LHS, Node* RHS, Token* Tok) {
     }
 
     //ptr + num
-    RHS = newBinary(ND_MUL, RHS, newNum(8, Tok), Tok);
+    RHS = newBinary(ND_MUL, RHS, newNum(LHS->Ty->Base->Size, Tok), Tok);
     return newBinary(ND_ADD, LHS, RHS, Tok);
 }
 
@@ -120,7 +126,7 @@ static Node* newSub(Node* LHS, Node* RHS, Token* Tok) {
 
     //ptr -  num
     if(LHS->Ty->Base && isInteger(RHS->Ty)) {
-        RHS = newBinary(ND_MUL, RHS, newNum(8, Tok), Tok);
+        RHS = newBinary(ND_MUL, RHS, newNum(LHS->Ty->Base->Size, Tok), Tok);
         addType(RHS);
         Node *Nd = newBinary(ND_SUB, LHS, RHS, Tok);
         Nd->Ty = LHS->Ty;
@@ -132,7 +138,7 @@ static Node* newSub(Node* LHS, Node* RHS, Token* Tok) {
         
         Node *Nd = newBinary(ND_SUB, LHS, RHS, Tok);
         Nd->Ty = TypeInt;
-        return newBinary(ND_DIV, Nd, newNum(8, Tok), Tok);
+        return newBinary(ND_DIV, RHS, newNum(LHS->Ty->Base->Size, Tok), Tok);
     }
     errorTok(Tok, "invalid operands");
     return NULL;
@@ -143,6 +149,42 @@ static void createParamLVars(Type* Param) {
         createParamLVars(Param->Next);
         newLVar(genIdent(Param->Name), Param);
     }
+}
+
+static Type* funcParams (Token** Rest, Token* Tok, Type* Ty) {
+    if(equal(Tok, "(")) {
+       Tok = Tok->Next;
+       Type Head = {};
+       Type* Cur = &Head;
+       while(!equal(Tok, ")")) {
+           if(Cur != &Head)
+               Tok = skip(Tok, ",");
+           Type* BaseTy = declspec(&Tok, Tok);
+           Type* DeclarTy = declarator(&Tok, Tok, BaseTy);
+           Cur->Next = copyType(DeclarTy);
+           Cur = Cur->Next;
+       }
+       
+       Ty = funcType(Ty);
+       Ty->Param = Head.Next;
+       *Rest = Tok->Next;
+       return Ty;
+    }
+}
+
+static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
+    if(equal(Tok, "(")) {
+        return funcParams(Rest, Tok, Ty);
+    }
+
+
+    if(equal(Tok, "[")) {
+        int Sz = getNumber(Tok->Next);
+        *Rest = skip(Tok->Next->Next, "]");
+        return arrayof(Ty, Sz);
+    }
+    *Rest = Tok;
+    return Ty;
 }
 
 // program = functionDefinition*
@@ -243,30 +285,6 @@ static Node* declaration(Token** Rest, Token* Tok) {
     Nd->Body = Head.Next;
     *Rest = Tok->Next;
     return Nd;
-}
-
-static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
-    if(equal(Tok, "(")) {
-       Tok = Tok->Next;
-       Type Head = {};
-       Type* Cur = &Head;
-       while(!equal(Tok, ")")) {
-           if(Cur != &Head)
-               Tok = skip(Tok, ",");
-           Type* BaseTy = declspec(&Tok, Tok);
-           Type* DeclarTy = declarator(&Tok, Tok, BaseTy);
-           Cur->Next = copyType(DeclarTy);
-           Cur = Cur->Next;
-       }
-       
-       Ty = funcType(Ty);
-
-       Ty->Param = Head.Next;
-       *Rest = Tok->Next;
-       return Ty;
-    }
-    *Rest = Tok;
-    return Ty;
 }
 
 static Node* stmt(Token** Rest, Token* Tok){
