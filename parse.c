@@ -219,7 +219,7 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 //mul = unary ("*" unary | "/" unary)*
 //unary = (+ | - | * | &) unary |  postfix
 //postfix = primary ("[" expr "]")*
-//primary = "(" expr ")" | num | ident func-args?
+//primary = "(" expr ")" | num | "sizeof" unary | ident func-args?
 //funcall = indent "("(assign (, assign)?)?")"
 //preorder
 
@@ -484,6 +484,12 @@ static Node* primary(Token** Rest, Token* Tok) {
         Node* Nd = newNum(Tok->Val, Tok);
         *Rest = Tok->Next;
         return Nd;
+    }
+
+    if(equal(Tok, "sizeof")) {
+        Node* Nd = unary(Rest, Tok->Next);
+        addType(Nd);
+        return newNum(Nd->Ty->Size, Tok);
     }
     errorTok(Tok, "unexpected an expression");
     return NULL;

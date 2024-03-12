@@ -61,7 +61,7 @@ static int readPunct(char* P) {
 }
 
 static bool isKeyWord(Token* Tok) {
-    static char* Kw[] = {"return", "if", "else", "for" ,"while", "int"};
+    static char* Kw[] = {"return", "if", "else", "for" ,"while", "int", "sizeof"};
     for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); i++) {
         if(equal(Tok, Kw[i]))
             return true;
