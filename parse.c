@@ -7,6 +7,7 @@
 #include "rvcc.h"
 
 Obj* Locals;
+Obj* Globals;
 
 static Obj* findVar(Token* Tok) {
     for(Obj* obj = Locals; obj; obj = obj->Next) {
@@ -52,19 +53,31 @@ static Node* newNum(int Val, Token* Tok) {
     return Nd;
 }
 
-static Node* newVar(Obj* Var, Token* Tok) {
+static Node* newVarNode(Obj* Var, Token* Tok) {
     Node* Nd = newNode(ND_VAR, Tok);
     Nd->Var = Var;
     return Nd;
 }
 
+static Obj* newVar(char* Name, Type* Ty) {
+    Obj* Var = calloc(1, sizeof(Obj));
+    Var->Name = Name;
+    Var->Ty = Ty;
+    return Var;
+}
 static Obj* newLVar(char* Name, Type* Ty) {
-    Obj* obj = calloc(1, sizeof(Obj));
-    obj->Name = Name;
-    obj->Next = Locals;
-    obj->Ty = Ty;
-    Locals = obj;
-    return obj;
+    Obj* Var = newVar(Name, Ty);
+    Var->IsLocal = true;
+    Var->Next = Locals;
+    Locals = Var;
+    return Var;
+}
+
+static Obj* newGVar(char* Name, Type* Ty) {
+    Obj* Var = newVar(Name, Ty);
+    Var->Next = Globals;
+    Globals = Var;
+    return Var;
 }
 
 Type* declspec(Token** Rest, Token* Tok) {
@@ -152,31 +165,27 @@ static void createParamLVars(Type* Param) {
 }
 
 static Type* funcParams (Token** Rest, Token* Tok, Type* Ty) {
-    if(equal(Tok, "(")) {
-       Tok = Tok->Next;
-       Type Head = {};
-       Type* Cur = &Head;
-       while(!equal(Tok, ")")) {
-           if(Cur != &Head)
-               Tok = skip(Tok, ",");
-           Type* BaseTy = declspec(&Tok, Tok);
-           Type* DeclarTy = declarator(&Tok, Tok, BaseTy);
-           Cur->Next = copyType(DeclarTy);
-           Cur = Cur->Next;
-       }
-       
-       Ty = funcType(Ty);
-       Ty->Param = Head.Next;
-       *Rest = Tok->Next;
-       return Ty;
-    }
+   Type Head = {};
+   Type* Cur = &Head;
+   while(!equal(Tok, ")")) {
+       if(Cur != &Head)
+           Tok = skip(Tok, ",");
+       Type* BaseTy = declspec(&Tok, Tok);
+       Type* DeclarTy = declarator(&Tok, Tok, BaseTy);
+       Cur->Next = copyType(DeclarTy);
+       Cur = Cur->Next;
+   }
+   
+   Ty = funcType(Ty);
+   Ty->Param = Head.Next;
+   *Rest = Tok->Next;
+   return Ty;
 }
 
 static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
     if(equal(Tok, "(")) {
-        return funcParams(Rest, Tok, Ty);
+        return funcParams(Rest, Tok->Next, Ty);
     }
-
 
     if(equal(Tok, "[")) {
         int Sz = getNumber(Tok->Next);
@@ -188,7 +197,7 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
     return Ty;
 }
 
-// program = functionDefinition*
+// program = (functionDefinition | globalVariable)*
 // functionDefinition = declspec declarator "{" compoundStmt*
 // declspec = "int"
 // declarator = "*"* ident typeSuffix
@@ -239,6 +248,7 @@ static Node* unary(Token** Rest, Token* Tok);
 static Node* funcall(Token** Rest, Token* Tok);
 
 static Node* compoundStmt(Token** Rest, Token* Tok) {
+   Node* Nd = newNode(ND_BLOCK, Tok);
    Node Head = {};
    Node* Cur = &Head;
    while(!equal(Tok, "}")) {
@@ -252,7 +262,6 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
        addType(Cur);
    }
    
-   Node* Nd = newNode(ND_BLOCK, Tok);
    Nd->Body = Head.Next;
    *Rest = Tok->Next;
    return Nd;
@@ -277,7 +286,7 @@ static Node* declaration(Token** Rest, Token* Tok) {
         if(!equal(Tok, "="))
             continue;
         
-        Node* LHS = newVar(Var, Ty->Name);
+        Node* LHS = newVarNode(Var, Ty->Name);
         Node* RHS = assign(&Tok, Tok->Next);
         Node* Nd = newBinary(ND_ASSIGN, LHS, RHS, Tok);
         
@@ -292,7 +301,8 @@ static Node* declaration(Token** Rest, Token* Tok) {
 
 static Node* stmt(Token** Rest, Token* Tok){
     if(equal(Tok, "return")) {
-        Node* Nd = newUnary(ND_RETURN, expr(&Tok, Tok->Next), Tok);
+        Node* Nd = newNode(ND_RETURN, Tok);
+        Nd->LHS = expr(&Tok, Tok->Next);
         *Rest = skip(Tok, ";");
         return Nd;
     }
@@ -303,8 +313,7 @@ static Node* stmt(Token** Rest, Token* Tok){
         Tok = skip(Tok->Next, "(");
         Nd->Cond = expr(&Tok, Tok);
         Tok = skip(Tok, ")");
-        Nd->Then = stmt(&Tok, Tok);
-        *Rest = Tok;
+        Nd->Then = stmt(Rest, Tok);
         return Nd;
     }
 
@@ -322,8 +331,7 @@ static Node* stmt(Token** Rest, Token* Tok){
             Nd->Inc = expr(&Tok, Tok);
         Tok = skip(Tok, ")");
         
-        Nd->Then = stmt(&Tok, Tok);
-        *Rest = Tok;
+        Nd->Then = stmt(Rest, Tok);
         return Nd;
     }
     
@@ -334,8 +342,7 @@ static Node* stmt(Token** Rest, Token* Tok){
         Tok = skip(Tok, ")");
         Nd->Then = stmt(&Tok, Tok);
         if(equal(Tok, "else")) {
-            Tok = skip(Tok, "else");
-            Nd->Els = stmt(&Tok, Tok);
+            Nd->Els = stmt(&Tok, Tok->Next);
         }
         *Rest = Tok;
         return Nd;
@@ -479,7 +486,7 @@ static Node* primary(Token** Rest, Token* Tok) {
             errorTok(Tok, "undefined varibles");
         }
         *Rest = Tok->Next;
-        return newVar(Var, Tok);
+        return newVarNode(Var, Tok);
     }else if(Tok->Kind == TK_NUM) {
         Node* Nd = newNum(Tok->Val, Tok);
         *Rest = Tok->Next;
@@ -515,30 +522,27 @@ static Node* funcall(Token** Rest, Token* Tok) {
     return Nd;
 }
 
-static Function* function(Token** Rest, Token* Tok) {
-    Type* Ty = declspec(&Tok, Tok);
-    Ty = declarator(&Tok, Tok, Ty);
+static Token* function(Token* Tok, Type* BaseTy) {
+    Type* Ty = declarator(&Tok, Tok, BaseTy);
 
-    Function* func = calloc(1, sizeof(Function));
+    Obj* Fn = newGVar(genIdent(Ty->Name), Ty);
+    Fn->IsFunction = true;
     Locals = NULL;
-
-    func->Name = genIdent(Ty->Name);
-    Tok = skip(Tok, "{");
     
     createParamLVars(Ty->Param);
-    func->Param = Locals;
-   
+    Fn->Param = Locals;
 
-    func->Body = compoundStmt(Rest, Tok);
-    func->Locals = Locals;
-    return func;
+    Tok = skip(Tok, "{");
+    Fn->Body = compoundStmt(&Tok, Tok);
+    Fn->Locals = Locals;
+    return Tok;
 }
 
-Function* parse(Token *Tok) {
-    Function Head = {};
-    Function* CurFunc = &Head;
+Obj* parse(Token *Tok) {
+    Globals = NULL;
     while(Tok->Kind != TK_EOF) {
-        CurFunc = CurFunc->Next = function(&Tok, Tok);
+        Type* BaseTy = declspec(&Tok, Tok);
+        Tok = function(Tok, BaseTy);
     }
-    return Head.Next;
+    return Globals;
 }

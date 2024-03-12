@@ -6,7 +6,7 @@
  ************************************************************************/
 #include "rvcc.h"
 
-static Function *CurrentFn;
+static Obj *CurrentFn;
 static void genExpr(Node *Nd);
 
 // 记录栈深度
@@ -287,8 +287,10 @@ static void genStmt(Node *Nd) {
 }
 
 // 根据变量的链表计算出偏移量
-static void assignLVarOffsets(Function *Prog) {
-   for (Function *Fn = Prog; Fn; Fn = Fn->Next) {
+static void assignLVarOffsets(Obj *Prog) {
+   for (Obj *Fn = Prog; Fn; Fn = Fn->Next) {
+    if(!Fn->IsFunction)
+        continue;
     int Offset = 0;
     // 读取所有变量
     for (Obj *Var = Fn->Locals; Var; Var = Var->Next) {
@@ -304,17 +306,16 @@ static void assignLVarOffsets(Function *Prog) {
 }
 
 // 代码生成入口函数，包含代码块的基础信息
-void codegen(Function *Prog) {
+void codegen(Obj *Prog) {
   assignLVarOffsets(Prog);
-  printf("  # 定义全局main段\n");
-  printf("  .globl main\n");
-  printf("\n# =====程序开始===============\n");
-  printf("# main段标签，也是程序入口段\n");
-  printf("main:\n");
 
-  for (Function *Fn = Prog; Fn; Fn = Fn->Next) {
+  for (Obj *Fn = Prog; Fn; Fn = Fn->Next) {
+    if(!Fn->IsFunction)
+        continue;
       printf("\n  # 定义全局%s段\n", Fn->Name);
       printf("  .globl %s\n", Fn->Name);
+      
+      printf("  .text\n");
       printf("# =====%s段开始===============\n", Fn->Name);
       printf("# %s段标签\n", Fn->Name);
       printf("%s:\n", Fn->Name);

@@ -60,7 +60,8 @@ struct Type {
     Token* Name;
     
     int ArraryLen;
-    
+   
+    //Function
     Type* ReturnTy;
     Type* Param;
     Type* Next;
@@ -68,17 +69,16 @@ struct Type {
 typedef struct Node Node;
 
 typedef struct Obj Obj;
-struct Obj {// Varibles
+struct Obj {
+  // Varibles
   Obj *Next; 
   char *Name; 
   Type* Ty;
-  int Offset; 
-};
+  bool IsLocal;
 
-typedef struct Function Function;
-struct Function {
-  Function* Next;
-  char* Name;
+  int Offset; 
+  //Function
+  bool IsFunction;
   Obj* Param;
 
   Node *Body;    
@@ -142,7 +142,7 @@ bool isInteger(Type *TY);
 Type *copyType(Type *Ty);
 void addType(Node* Nd);
 Type* funcType(Type* ReturnTy);
-Function *parse(Token *Tok);
-void codegen(Function* Prog);
+Obj *parse(Token *Tok);
+void codegen(Obj* Prog);
 static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty); 
 Type* arrayof(Type* Base, int Size);

@@ -8,7 +8,6 @@
 
 /*Lexical analysis*/
 static char* currentInput;
-static Function *CurrentFn;
 
 void error(char* Fmt, ...) {
     va_list VA;

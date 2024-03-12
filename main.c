@@ -14,7 +14,7 @@ int main(int Argc, const char** Argv) {
         // 1 represent error
     }
     Token* Tok = tokenize(Argv[1]);
-    Function* Prog = parse(Tok); 
+    Obj* Prog = parse(Tok); 
     codegen(Prog);
     
     return 0;
