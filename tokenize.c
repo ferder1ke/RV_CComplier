@@ -113,15 +113,57 @@ static bool isIdent2(char C) {
     return isIdent1(C) || ('0' <= C && C <= '9');
 }
 
-static Token* readStringLiteral(char* Start) {
-    char *P = Start + 1; 
+static int readEscapeChar(char* P) {
+    switch (*P) {
+        case 'a': // 响铃（警报）
+            return '\a';
+        case 'b': // 退格
+            return '\b';
+        case 't': // 水平制表符，tab
+            return '\t';
+        case 'n': // 换行
+            return '\n';
+        case 'v': // 垂直制表符
+            return '\v';
+        case 'f': // 换页
+            return '\f';
+        case 'r': // 回车
+            return '\r';
+        // 属于GNU C拓展
+        case 'e': // 转义符
+            return 27;
+        default: // 默认将原字符返回
+            return *P;
+    }
+}
+static char* stringLiteralEnd(char* P) {
+    char* Start = P;
     for(; *P != '"'; ++P) {
         if(*P == '\n' || *P == '\0')
             errorAt(Start, "unclosed string literal");
+        if(*P == '\\')
+            ++P;
     }
-    Token* Tok = genToken(TK_STR, Start, P + 1); 
-    Tok->Ty = arrayof(TypeChar, P - Start);//don`t forget the '\0'
-    Tok->Str = strndup(Start + 1, P - Start - 1);
+    return P;
+}
+
+
+static Token* readStringLiteral(char* Start) {
+    char* End = stringLiteralEnd(Start + 1);
+    char* Buf = calloc(1, End - Start);
+    int Len = 0;
+
+    for(char* P = Start + 1; P < End;) {
+        if(*P == '\\') {
+            Buf[Len++] = readEscapeChar(P + 1);
+            P += 2;
+        }else {
+            Buf[Len++] = *P++;
+        }
+    }
+    Token* Tok = genToken(TK_STR, Start, End + 1); 
+    Tok->Ty = arrayof(TypeChar, Len + 1);//don`t forget the '\0'
+    Tok->Str = Buf;
     return Tok;
 }
 
