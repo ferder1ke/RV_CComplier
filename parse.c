@@ -16,6 +16,13 @@ static Obj* findVar(Token* Tok) {
             return obj;
         }
     }
+
+    for(Obj* obj = Globals; obj; obj = obj->Next) {
+        if((strlen(obj->Name) == Tok->Len) 
+                && !strncmp(Tok->Pos, obj->Name, Tok->Len)){
+            return obj;
+        }
+    }
     return NULL;
 }
 
@@ -538,11 +545,36 @@ static Token* function(Token* Tok, Type* BaseTy) {
     return Tok;
 }
 
+static Token* globalVariable(Token* Tok, Type* BaseTy) {
+    bool First = true;
+    while(!consume(&Tok, Tok, ";")) {
+        if(!First)
+            Tok = skip(Tok, ",");
+        First = false;
+        Type* Ty = declarator(&Tok, Tok, BaseTy);
+        newGVar(genIdent(Ty->Name), Ty);
+    }
+    return Tok;
+}
+
+static bool isFunction(Token* Tok) {
+    if(equal(Tok, ";"))
+        return false;
+    
+    Type Dummy = {};
+    Type* Ty = declarator(&Tok, Tok, &Dummy);
+    return Ty->typeKind == TypeFunc;
+}
+
 Obj* parse(Token *Tok) {
     Globals = NULL;
     while(Tok->Kind != TK_EOF) {
         Type* BaseTy = declspec(&Tok, Tok);
-        Tok = function(Tok, BaseTy);
+        if(isFunction(Tok)){
+            Tok = function(Tok, BaseTy);
+            continue;
+        }
+        Tok = globalVariable(Tok, BaseTy);    
     }
     return Globals;
 }

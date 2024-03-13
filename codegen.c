@@ -62,9 +62,14 @@ static int alignTo(int N, int Align) {
 static void genAddr(Node *Nd) {
     switch(Nd->Kind) {
         case ND_VAR:
-            printf("  # 获取变量%s的栈内地址为%d(fp)\n", Nd->Var->Name,
-                   Nd->Var->Offset);
-            printf("  addi a0, fp, %d\n", Nd->Var->Offset);
+        if (Nd->Var->IsLocal) { // 偏移量是相对于fp的
+          printf("  # 获取局部变量%s的栈内地址为%d(fp)\n", Nd->Var->Name,
+                 Nd->Var->Offset);
+          printf("  addi a0, fp, %d\n", Nd->Var->Offset);
+        } else {
+          printf("  # 获取全局变量%s的地址\n", Nd->Var->Name);
+          printf("  la a0, %s\n", Nd->Var->Name);
+        }
         return;
         case ND_DEREF:
             genExpr(Nd->LHS);
@@ -305,9 +310,22 @@ static void assignLVarOffsets(Obj *Prog) {
  
 }
 
+static void emitData(Obj* Prog) {
+
+  for (Obj *Var = Prog; Var; Var = Var->Next) {
+     if(Var->IsFunction)
+         continue;
+     printf("  # 数据段标签\n");
+    printf("  .data\n");
+    printf("  .globl %s\n", Var->Name);
+    printf("  # 全局变量%s\n", Var->Name);
+    printf("%s:\n", Var->Name);
+    printf("  # 零填充%d位\n", Var->Ty->Size);
+    printf("  .zero %d\n", Var->Ty->Size);
+  }
+}
 // 代码生成入口函数，包含代码块的基础信息
-void codegen(Obj *Prog) {
-  assignLVarOffsets(Prog);
+void emitText(Obj *Prog) {
 
   for (Obj *Fn = Prog; Fn; Fn = Fn->Next) {
     if(!Fn->IsFunction)
@@ -373,4 +391,9 @@ void codegen(Obj *Prog) {
       printf("  # 返回a0值给系统调用\n");
       printf("  ret\n");
   }
+}
+void codegen(Obj *Prog) {
+    assignLVarOffsets(Prog);
+    emitData(Prog);
+    emitText(Prog);
 }
