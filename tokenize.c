@@ -113,7 +113,22 @@ static bool isIdent2(char C) {
     return isIdent1(C) || ('0' <= C && C <= '9');
 }
 
-static int readEscapeChar(char* P) {
+static int readEscapeChar(char** NewPos, char* P) {
+   if('0' <= *P && *P <= '7'){ //octal num hint:the octal num len can`t beyond 3 
+        int C = *P - '0';
+        ++P;
+        if('0' <= *P && *P <= '7'){ //octal num hint:the octal num len can`t beyond 3 
+            C = (C << 3) + (*P - '0');
+            ++P;
+            if('0' <= *P && *P <= '7'){ //octal num hint:the octal num len can`t beyond 3 
+                C = (C << 3) + (*P - '0');
+                ++P;
+            }
+        }
+    *NewPos = P;
+    return C;
+   }
+    *NewPos = P + 1;
     switch (*P) {
         case 'a': // 响铃（警报）
             return '\a';
@@ -155,8 +170,7 @@ static Token* readStringLiteral(char* Start) {
 
     for(char* P = Start + 1; P < End;) {
         if(*P == '\\') {
-            Buf[Len++] = readEscapeChar(P + 1);
-            P += 2;
+            Buf[Len++] = readEscapeChar(&P, P + 1);
         }else {
             Buf[Len++] = *P++;
         }
