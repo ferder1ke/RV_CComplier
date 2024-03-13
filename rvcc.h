@@ -105,6 +105,7 @@ typedef enum {
     ND_LT,          // <
     ND_LE,          // <=
     ND_EXPR_STMT,   // ;
+    ND_STMT_EXPR,
     ND_ASSIGN,      // assign
     ND_VAR,         // var
     ND_RETURN,      // return
@@ -154,4 +155,5 @@ Obj *parse(Token *Tok);
 void codegen(Obj* Prog);
 static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty); 
 Type* arrayof(Type* Base, int Size);
+static void genStmt(Node *Nd); 
 char *format(char *Fmt, ...);

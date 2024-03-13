@@ -261,7 +261,14 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 //mul = unary ("*" unary | "/" unary)*
 //unary = (+ | - | * | &) unary |  postfix
 //postfix = primary ("[" expr "]")*
-//primary = "(" expr ")" | num | "sizeof" unary | ident func-args? | str
+
+//primary = "(" "{" stmt+  "}" ")"
+//          | "(" expr ")" 
+//          | num 
+//          | "sizeof" unary 
+//          | ident func-args? 
+//          | str
+
 //funcall = indent "("(assign (, assign)?)?")"
 //preorder
 
@@ -506,6 +513,12 @@ static Node* postfix(Token** Rest, Token* Tok) {
 }
 
 static Node* primary(Token** Rest, Token* Tok) {
+    if(equal(Tok, "(") && equal(Tok->Next, "{")) {
+        Node* Nd = newNode(ND_STMT_EXPR, Tok);
+        Nd->Body = compoundStmt(&Tok, Tok->Next->Next)->Body;
+        *Rest = skip(Tok, ")");
+        return Nd;
+    }
     if(equal(Tok, "(")) {
         Node* Nd = expr(&Tok, Tok->Next);
         *Rest = skip(Tok, ")");

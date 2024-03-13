@@ -120,6 +120,11 @@ static void genExpr(Node *Nd) {
     genExpr(Nd->RHS);
     store(Nd->Ty);
     return;
+  case ND_STMT_EXPR:
+    for(Node* N = Nd->Body; N; N = N->Next){
+        genStmt(N);
+    }
+    return;
   case ND_DEREF:
     genExpr(Nd->LHS);
     load(Nd->Ty);

@@ -112,6 +112,19 @@ void addType(Node* Nd) {
             return;
         case ND_FUNCALL:
             Nd->Ty = TypeInt;
+            return;
+        case ND_STMT_EXPR:
+            if(Nd->Body) {
+                Node* Stmt = Nd->Body;
+                while(Stmt->Next)
+                    Stmt = Stmt->Next;
+                if(Stmt->Kind == ND_EXPR_STMT){
+                    Nd->Ty = Stmt->LHS->Ty;
+                    return;
+                }
+            }
+            errorTok(Nd->Tok, "statement expression returning void is not supported");
+            return;
         default:
             break;
     }
