@@ -154,3 +154,4 @@ Obj *parse(Token *Tok);
 void codegen(Obj* Prog);
 static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty); 
 Type* arrayof(Type* Base, int Size);
+char *format(char *Fmt, ...);

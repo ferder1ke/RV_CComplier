@@ -217,9 +217,7 @@ static bool isTypename(Token* Tok) {
 
 static char* newUniqueName(void) {
     static int Id = 0;
-    char* Buf = calloc(1, 20);
-    sprintf(Buf, ".L..%d", Id++);
-    return Buf;
+    return format(".L..%d", Id++);
 }
 
 Obj* newAnonGVar(Type* Ty) {
