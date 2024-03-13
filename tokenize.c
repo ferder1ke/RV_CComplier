@@ -113,6 +113,18 @@ static bool isIdent2(char C) {
     return isIdent1(C) || ('0' <= C && C <= '9');
 }
 
+static Token* readStringLiteral(char* Start) {
+    char *P = Start + 1; 
+    for(; *P != '"'; ++P) {
+        if(*P == '\n' || *P == '\0')
+            errorAt(Start, "unclosed string literal");
+    }
+    Token* Tok = genToken(TK_STR, Start, P + 1); 
+    Tok->Ty = arrayof(TypeChar, P - Start);//don`t forget the '\0'
+    Tok->Str = strndup(Start + 1, P - Start - 1);
+    return Tok;
+}
+
 Token* tokenize(char* P) {
    currentInput = P;
    Token Head = {};
@@ -141,7 +153,12 @@ Token* tokenize(char* P) {
            cur = cur->Next;
            continue;
        }
-
+       if(*P == '"') {
+            cur->Next = readStringLiteral(P);
+            cur = cur->Next;
+            P += cur->Len;
+            continue;
+       }
        int punctLen = readPunct(P);
        if(punctLen) {
             cur->Next = genToken(TK_PUNCT, P, P + punctLen);

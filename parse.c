@@ -214,6 +214,24 @@ static bool isTypename(Token* Tok) {
         return true;
     return false;
 }
+
+static char* newUniqueName(void) {
+    static int Id = 0;
+    char* Buf = calloc(1, 20);
+    sprintf(Buf, ".L..%d", Id++);
+    return Buf;
+}
+
+Obj* newAnonGVar(Type* Ty) {
+    return newGVar(newUniqueName(), Ty);
+}
+
+static Obj* newStringLiteral(char* Str, Type* Ty) {
+    Obj* Var = newAnonGVar(Ty);
+    Var->InitData = Str;
+    return Var;
+}
+
 // program = (functionDefinition | globalVariable)*
 // functionDefinition = declspec declarator "{" compoundStmt*
 // declspec = "int" | "char"
@@ -245,7 +263,7 @@ static bool isTypename(Token* Tok) {
 //mul = unary ("*" unary | "/" unary)*
 //unary = (+ | - | * | &) unary |  postfix
 //postfix = primary ("[" expr "]")*
-//primary = "(" expr ")" | num | "sizeof" unary | ident func-args?
+//primary = "(" expr ")" | num | "sizeof" unary | ident func-args? | str
 //funcall = indent "("(assign (, assign)?)?")"
 //preorder
 
@@ -509,7 +527,11 @@ static Node* primary(Token** Rest, Token* Tok) {
         *Rest = Tok->Next;
         return Nd;
     }
-
+    if(Tok->Kind == TK_STR) {
+        Obj* Var = newStringLiteral(Tok->Str, Tok->Ty);
+        *Rest = Tok->Next;
+        return newVarNode(Var, Tok);
+    }
     if(equal(Tok, "sizeof")) {
         Node* Nd = unary(Rest, Tok->Next);
         addType(Nd);

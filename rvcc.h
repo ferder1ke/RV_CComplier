@@ -16,12 +16,15 @@
 
 static char *ArgReg[] = {"a0", "a1", "a2", "a3", "a4", "a5"};
 
+typedef struct Type Type;
+typedef struct Node Node;
 typedef enum {
     TK_PUNCT,
     TK_NUM,
     TK_EOF,
     TK_IDENT,
-    TK_KEYWORD
+    TK_KEYWORD,
+    TK_STR
 } TokenKind;
 
 typedef struct Token Token;
@@ -32,6 +35,9 @@ struct Token{
     int Val;
     int Len;
     char* Pos; 
+
+    Type* Ty;
+    char* Str;
 };
 
 bool consume(Token** Rest, Token* Tok, char* Str);
@@ -51,7 +57,6 @@ typedef enum {
 }TypeKind;
 
 
-typedef struct Type Type;
 
 struct Type {
     TypeKind typeKind;
@@ -67,7 +72,6 @@ struct Type {
     Type* Param;
     Type* Next;
 };
-typedef struct Node Node;
 
 typedef struct Obj Obj;
 struct Obj {
@@ -82,6 +86,7 @@ struct Obj {
   bool IsFunction;
   Obj* Param;
 
+  char* InitData;
   Node *Body;    
   Obj *Locals; 
   int StackSize;
@@ -127,6 +132,7 @@ struct Node{
     Obj*  Var;
     Node* Body;
     
+
     char* FuncName;
     Node* Args;
 

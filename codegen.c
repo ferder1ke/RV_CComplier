@@ -320,16 +320,29 @@ static void assignLVarOffsets(Obj *Prog) {
 
 static void emitData(Obj* Prog) {
 
+  printf("  # 数据段标签\n");
+  printf("  .data\n");
   for (Obj *Var = Prog; Var; Var = Var->Next) {
      if(Var->IsFunction)
          continue;
-     printf("  # 数据段标签\n");
-    printf("  .data\n");
-    printf("  .globl %s\n", Var->Name);
-    printf("  # 全局变量%s\n", Var->Name);
-    printf("%s:\n", Var->Name);
-    printf("  # 零填充%d位\n", Var->Ty->Size);
-    printf("  .zero %d\n", Var->Ty->Size);
+     if(Var->InitData){
+         printf("%s:\n", Var->Name);
+         for(int I = 0; I < Var->Ty->Size; ++I) {
+            char C = Var->InitData[I];
+            if(isprint(C)) {
+                 printf("  .byte %d\t# 字符：%c\n", C, C);
+            }else {
+                 printf("  .byte %d\t# 字符：%c\n", C, C);
+            }
+         }
+     }
+    else{
+        printf("  .globl %s\n", Var->Name);
+        printf("  # 全局变量%s\n", Var->Name);
+        printf("%s:\n", Var->Name);
+        printf("  # 零填充%d位\n", Var->Ty->Size);
+        printf("  .zero %d\n", Var->Ty->Size);
+    }
   }
 }
 // 代码生成入口函数，包含代码块的基础信息

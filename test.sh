@@ -39,7 +39,14 @@ assert() {
     exit 1
   fi
 }
+assert 0 'int main() { return ""[0]; }'
+assert 1 'int main() { return sizeof(""); }'
 
+assert 97 'int main() { return "abc"[0]; }'
+assert 98 'int main() { return "abc"[1]; }'
+assert 99 'int main() { return "abc"[2]; }'
+assert 0 'int main() { return "abc"[3]; }'
+assert 4 'int main() { return sizeof("abc"); }'
 assert 1 'int main() { char x=1; return x; }'
 assert 1 'int main() { char x=1; char y=2; return x; }'
 assert 2 'int main() { char x=1; char y=2; return y; }'
