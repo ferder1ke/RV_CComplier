@@ -88,6 +88,11 @@ static Obj* newGVar(char* Name, Type* Ty) {
 }
 
 Type* declspec(Token** Rest, Token* Tok) {
+    if(equal(Tok, "char")) {
+        *Rest = Tok->Next;
+        return TypeChar;
+    }
+
     *Rest = skip(Tok, "int");
     return TypeInt;
 }
@@ -204,9 +209,14 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
     return Ty;
 }
 
+static bool isTypename(Token* Tok) {
+    if(equal(Tok, "int") || equal(Tok, "char"))
+        return true;
+    return false;
+}
 // program = (functionDefinition | globalVariable)*
 // functionDefinition = declspec declarator "{" compoundStmt*
-// declspec = "int"
+// declspec = "int" | "char"
 // declarator = "*"* ident typeSuffix
 // typeSuffix = ("(" funcParams? ")")?
 // funcParams = param ("," param)*
@@ -259,7 +269,7 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
    Node Head = {};
    Node* Cur = &Head;
    while(!equal(Tok, "}")) {
-       if(equal(Tok, "int")) {
+       if(isTypename(Tok)) {
            Cur->Next  = declaration(&Tok, Tok);
            Cur = Cur->Next;
        }else {

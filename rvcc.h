@@ -43,10 +43,11 @@ Token *skip(Token *Tok, char *Str);
 Token *tokenize(char *Input);
 
 typedef enum {
-    TypeINT,  //int
-    TypePTR,  //pointer
-    TypeFunc, //Function
-    TypeARRAY //Arrary
+    TypeINT,   //int
+    TypePTR,   //pointer
+    TypeFunc,  //Function
+    TypeARRAY, //Arrary
+    TypeCHAR   //Char
 }TypeKind;
 
 
@@ -112,6 +113,7 @@ typedef enum {
 
 
 extern Type* TypeInt;
+extern Type* TypeChar;
 
 Type* pointerTo(Type* Base);
 

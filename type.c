@@ -7,11 +7,16 @@
 
 Type* TypeInt = &(Type){
     TypeINT,
-    8
+    8 //8 byte
+};
+
+Type* TypeChar = &(Type) {
+    TypeCHAR,
+    1 //1 byte
 };
 
 bool isInteger(Type* TY) {
-    return TY->typeKind == TypeINT;
+    return TY->typeKind == TypeINT || TY->typeKind == TypeCHAR;
 }
 
 Type* copyType(Type* Ty) {
