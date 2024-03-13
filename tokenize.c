@@ -113,6 +113,14 @@ static bool isIdent2(char C) {
     return isIdent1(C) || ('0' <= C && C <= '9');
 }
 
+static int fromHex(char* C){
+    if('0' <= *C && *C <= '9')
+        return (*C - '0'); 
+    if('a' <= *C && *C <= 'f')
+        return (*C - 'a' + 10);
+    return (*C - 'A' + 10);
+}
+
 static int readEscapeChar(char** NewPos, char* P) {
    if('0' <= *P && *P <= '7'){ //octal num hint:the octal num len can`t beyond 3 
         int C = *P - '0';
@@ -128,8 +136,22 @@ static int readEscapeChar(char** NewPos, char* P) {
     *NewPos = P;
     return C;
    }
-    *NewPos = P + 1;
-    switch (*P) {
+   
+   if(*P == 'x') {
+       ++P;
+       if(!isxdigit(*P)) {
+            errorAt(P, "invalid hex escape sequence");
+       }
+       int C = 0;
+       for(; isxdigit(*P); ++P) {
+           C = (C << 4) + fromHex(P);
+       }
+       *NewPos = P;
+       return C;
+   }
+
+   *NewPos = P + 1;
+   switch (*P) {
         case 'a': // 响铃（警报）
             return '\a';
         case 'b': // 退格
