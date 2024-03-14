@@ -8,15 +8,15 @@
 
 static Obj *CurrentFn;
 static void genExpr(Node *Nd);
-
+static FILE* OutputFile;
 static void printLn(char* Fmt, ...) {
     va_list VA;
 
     va_start(VA, Fmt);
-    vprintf(Fmt, VA);
+    vfprintf(OutputFile, Fmt, VA);
     va_end(VA);
 
-    printf("\n");
+    fprintf(OutputFile,"\n");
 }
 
 // 记录栈深度
@@ -432,7 +432,8 @@ void emitText(Obj *Prog) {
       printLn("  ret");
   }
 }
-void codegen(Obj *Prog) {
+void codegen(Obj *Prog, FILE* Out) {
+    OutputFile = Out;
     assignLVarOffsets(Prog);
     emitData(Prog);
     emitText(Prog);

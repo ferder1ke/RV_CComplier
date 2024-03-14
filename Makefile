@@ -9,8 +9,9 @@ rvcc: $(OBJS)
 $(OBJS): rvcc.h
 test:rvcc
 	./test.sh
-
+	./test-driver.sh
 # 清理标签，清理所有非源代码文件
+
 clean:
 	rm -f rvcc *.o *.s tmp* a.out .gdb_history build/ 
  

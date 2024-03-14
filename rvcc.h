@@ -153,7 +153,7 @@ Type *copyType(Type *Ty);
 void addType(Node* Nd);
 Type* funcType(Type* ReturnTy);
 Obj *parse(Token *Tok);
-void codegen(Obj* Prog);
+void codegen(Obj* Prog, FILE*  Out);
 static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty); 
 Type* arrayof(Type* Base, int Size);
 static void genStmt(Node *Nd); 
