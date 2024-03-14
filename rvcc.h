@@ -13,6 +13,7 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <errno.h>
 
 static char *ArgReg[] = {"a0", "a1", "a2", "a3", "a4", "a5"};
 
@@ -46,7 +47,7 @@ void errorAt(char *Loc, char *Fmt, ...);
 void errorTok(Token *Tok, char *Fmt, ...);
 bool equal(Token *Tok, char *Str);
 Token *skip(Token *Tok, char *Str);
-Token *tokenize(char *Input);
+Token *tokenizeFile(char *Path);
 
 typedef enum {
     TypeINT,   //int

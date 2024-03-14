@@ -13,7 +13,8 @@ int main(int Argc, const char** Argv) {
         error("%s: invalid number of Arguments!\n", Argv[0]);
         // 1 represent error
     }
-    Token* Tok = tokenize(Argv[1]);
+ 
+    Token* Tok = tokenizeFile(Argv[1]);
     Obj* Prog = parse(Tok); 
     codegen(Prog);
     

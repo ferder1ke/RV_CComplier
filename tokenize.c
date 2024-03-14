@@ -8,6 +8,7 @@
 
 /*Lexical analysis*/
 static char* currentInput;
+static char* CurrentFilename;
 
 void error(char* Fmt, ...) {
     va_list VA;
@@ -19,9 +20,28 @@ void error(char* Fmt, ...) {
 }
 
 static void __verrorAt(char* Loc, char* Fmt, va_list VA) {
-    fprintf(stderr, "%s\n", currentInput);
+    char* Line = Loc;
+    //don`t minor than currentInput provide in lower bound
+    while(currentInput < Line && Line[-1] == '\n')
+        Line--;
+    char* End = Loc;
+    while(*End != '\n') {
+        ++End;
+    }
+    
+    //get line number
+    int LineNo = 1;
+    for(char* P = currentInput; P < Line; ++P) {
+        if(*P == '\n')
+            ++LineNo;
+    }
 
-    int Pos = Loc - currentInput;
+    //Indent regist how many character has been output
+    int Indent = fprintf(stderr, "%s:%d ", CurrentFilename, LineNo);
+
+    fprintf(stderr, "%.*s\n", (int)(End - Line), Line);
+
+    int Pos = Loc - Line + Indent;
     fprintf(stderr, "%*s", Pos, " ");
     fprintf(stderr, "^ ");
     vfprintf(stderr, Fmt, VA);
@@ -203,7 +223,8 @@ static Token* readStringLiteral(char* Start) {
     return Tok;
 }
 
-Token* tokenize(char* P) {
+Token* tokenize(char* Filename, char* P) {
+   CurrentFilename = Filename;
    currentInput = P;
    Token Head = {};
    Token* cur = &Head;
@@ -255,4 +276,43 @@ Token* tokenize(char* P) {
    return Head.Next;
 }
 
+Token* readFile(char* Path) {
+    FILE* FP;
 
+    //openfile
+    if(strcmp(Path, "-") == 0) {
+        FP = stdin;
+    }else {
+        FP = fopen(Path, "r");
+        if(!FP) 
+            error("can`t open %s: %s", Path, strerror(errno));
+    }
+
+    //prepare Buffer
+    char* Buf;
+    size_t BufLen;
+    FILE* Out = open_memstream(&Buf, &BufLen);
+    
+    while(1) {
+        char Buf2[4096];
+        int N = fread(Buf2, 1, sizeof(Buf2), FP);
+        if(N == 0)
+            break;
+        fwrite(Buf2, 1, N, Out);
+    }
+
+    //finish read
+    if(FP != stdin)
+        fclose(FP);
+    fflush(Out);
+    if(BufLen == 0 || Buf[BufLen - 1] != '\n')
+        fputc('\n', Out);
+
+    fputc('\0', Out);
+    fclose(Out);
+    return Buf;
+}
+
+Token* tokenizeFile(char* Path) {
+    return tokenize(Path, readFile(Path));
+}
