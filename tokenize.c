@@ -233,6 +233,22 @@ Token* tokenize(char* Filename, char* P) {
             ++P;
             continue;
        }
+     
+       if(startWith(P, "//")){
+            P += 2;
+            while(*P != '\n')
+                ++P;
+            continue;
+       }
+
+       if(startWith(P, "/*")){
+            char* Q = strstr(P + 2, "*/");
+            if(!Q)
+                errorAt(P, "unclosed block comment");
+            P = Q + 2;
+            continue;
+       }
+      
 
        if(isdigit(*P)) {
             cur->Next = genToken(TK_NUM, P, P);
@@ -276,7 +292,7 @@ Token* tokenize(char* Filename, char* P) {
    return Head.Next;
 }
 
-Token* readFile(char* Path) {
+char* readFile(char* Path) {
     FILE* FP;
 
     //openfile
