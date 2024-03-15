@@ -19,7 +19,7 @@ void error(char* Fmt, ...) {
     exit(1);//Exception
 }
 
-static void __verrorAt(char* Loc, char* Fmt, va_list VA) {
+static void __verrorAt(int LineNo, char* Loc, char* Fmt, va_list VA) {
     char* Line = Loc;
     //don`t minor than currentInput provide in lower bound
     while(currentInput < Line && Line[-1] == '\n')
@@ -29,12 +29,6 @@ static void __verrorAt(char* Loc, char* Fmt, va_list VA) {
         ++End;
     }
     
-    //get line number
-    int LineNo = 1;
-    for(char* P = currentInput; P < Line; ++P) {
-        if(*P == '\n')
-            ++LineNo;
-    }
 
     //Indent regist how many character has been output
     int Indent = fprintf(stderr, "%s:%d ", CurrentFilename, LineNo);
@@ -50,15 +44,22 @@ static void __verrorAt(char* Loc, char* Fmt, va_list VA) {
 }
 
 void errorAt(char* Loc, char* Fmt, ...) {
+   
+    //get line number
+    int LineNo = 1;
+    for(char* P = currentInput; P < Loc; ++P) {
+        if(*P == '\n')
+            ++LineNo;
+    }
     va_list VA;
     va_start(VA, Fmt);
-    __verrorAt(Loc, Fmt, VA);
+    __verrorAt(LineNo, Loc, Fmt, VA);
     exit(1);
 }
 void errorTok(Token* Tok, char* Fmt, ...) {
     va_list VA;
     va_start(VA, Fmt);
-    __verrorAt(Tok->Pos, Fmt, VA);
+    __verrorAt(Tok->LineNo, Tok->Pos, Fmt, VA);
     exit(1);
 }
 
@@ -223,6 +224,20 @@ static Token* readStringLiteral(char* Start) {
     return Tok;
 }
 
+void addLineNumber(Token* Tok) {
+    char* P = currentInput;
+    int N = 1;
+    do{
+        if(P == Tok->Pos) {
+            Tok->LineNo = N;
+            Tok = Tok->Next;
+        }
+        if(*P == '\n') {
+            ++N;
+        }
+    } while(*P++);
+}
+
 Token* tokenize(char* Filename, char* P) {
    CurrentFilename = Filename;
    currentInput = P;
@@ -283,11 +298,12 @@ Token* tokenize(char* Filename, char* P) {
        }
        
        errorAt(P, "invalid Token");
-       
+               
        error("unexpected character %s", P);
    }
    
    cur->Next = genToken(TK_EOF, P, P);
+   addLineNumber(Head.Next);
    convertKeywords(Head.Next); 
    return Head.Next;
 }
