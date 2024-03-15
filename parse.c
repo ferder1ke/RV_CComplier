@@ -9,21 +9,49 @@
 Obj* Locals;
 Obj* Globals;
 
-static Obj* findVar(Token* Tok) {
-    for(Obj* obj = Locals; obj; obj = obj->Next) {
-        if((strlen(obj->Name) == Tok->Len) 
-                && !strncmp(Tok->Pos, obj->Name, Tok->Len)){
-            return obj;
-        }
-    }
+typedef struct Scope Scope;
+typedef struct VarScope VarScope;
 
-    for(Obj* obj = Globals; obj; obj = obj->Next) {
-        if((strlen(obj->Name) == Tok->Len) 
-                && !strncmp(Tok->Pos, obj->Name, Tok->Len)){
-            return obj;
-        }
-    }
+struct Scope {
+    Scope* Next;
+    VarScope* Vars;
+};
+
+struct VarScope {
+    VarScope* Next;
+    char* Name;
+    Obj* Vars;
+
+};
+
+static Scope *Scp = &(Scope) {};
+
+static void enterScope(void) {
+    Scope* S = calloc(1, sizeof(Scope));
+    S->Next = Scp;
+    Scp = S;
+}
+
+static void leaveScope(void) {
+    Scp = Scp->Next;
+}
+
+
+static Obj* findVar(Token* Tok) {
+    for(Scope* S = Scp; S; S = S->Next) 
+        for(VarScope* S2 = S->Vars; S2; S2 = S2->Next)
+            if(equal(Tok, S2->Name))
+                return S2->Vars;
     return NULL;
+}
+
+static VarScope* pushScope(char* Name, Obj* Var) {
+    VarScope* S = calloc(1, sizeof(VarScope));
+    S->Name = Name;
+    S->Vars = Var;
+    S->Next = Scp->Vars;
+    Scp->Vars = S; 
+    return S;
 }
 
 static int getNumber(Token* Tok) {
@@ -70,6 +98,7 @@ static Obj* newVar(char* Name, Type* Ty) {
     Obj* Var = calloc(1, sizeof(Obj));
     Var->Name = Name;
     Var->Ty = Ty;
+    pushScope(Name, Var);
     return Var;
 }
 static Obj* newLVar(char* Name, Type* Ty) {
@@ -291,6 +320,7 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
    Node* Nd = newNode(ND_BLOCK, Tok);
    Node Head = {};
    Node* Cur = &Head;
+   enterScope();
    while(!equal(Tok, "}")) {
        if(isTypename(Tok)) {
            Cur->Next  = declaration(&Tok, Tok);
@@ -301,7 +331,7 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
        }
        addType(Cur);
    }
-   
+   leaveScope();
    Nd->Body = Head.Next;
    *Rest = Tok->Next;
    return Nd;
@@ -578,13 +608,14 @@ static Token* function(Token* Tok, Type* BaseTy) {
     Obj* Fn = newGVar(genIdent(Ty->Name), Ty);
     Fn->IsFunction = true;
     Locals = NULL;
-    
+    enterScope(); 
     createParamLVars(Ty->Param);
     Fn->Param = Locals;
 
     Tok = skip(Tok, "{");
     Fn->Body = compoundStmt(&Tok, Tok);
     Fn->Locals = Locals;
+    leaveScope();
     return Tok;
 }
 
