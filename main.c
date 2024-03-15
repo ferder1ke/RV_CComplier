@@ -59,6 +59,7 @@ int main(int Argc, const char** Argv) {
     Token* Tok = tokenizeFile(InputPath);
     Obj* Prog = parse(Tok); 
     FILE* Out = openFile(OptO);
+    fprintf(Out, ".file 1 \"%s\"\n", InputPath);
     codegen(Prog, Out);
     
     return 0;
