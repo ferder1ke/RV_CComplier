@@ -192,7 +192,7 @@ static Node* newSub(Node* LHS, Node* RHS, Token* Tok) {
         
         Node *Nd = newBinary(ND_SUB, LHS, RHS, Tok);
         Nd->Ty = TypeInt;
-        return newBinary(ND_DIV, RHS, newNum(LHS->Ty->Base->Size, Tok), Tok);
+        return newBinary(ND_DIV, Nd, newNum(LHS->Ty->Base->Size, Tok), Tok);
     }
     errorTok(Tok, "invalid operands");
     return NULL;
