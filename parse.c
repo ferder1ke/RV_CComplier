@@ -281,7 +281,7 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 //       | "while" "(" expr ")" stmt  
 // exprStmt = expr? ";"
 
-// expr = assign
+// expr = assign (',' expr)?
 // assign = equality ("=" assign)?
 
 // equality = relational ("==" relational | "!=" relational)*
@@ -437,7 +437,11 @@ static Node* exprStmt(Token** Rest, Token* Tok) {
 }
 
 static Node* expr(Token** Rest, Token* Tok) {
-    return assign(Rest, Tok);
+    Node* Nd = assign(&Tok, Tok); // Remember if trans Rest unless &Tok, the Token pointer val is not change!!! 
+    if(equal(Tok, ","))
+        return newBinary(ND_COMMA, Nd, expr(Rest, Tok->Next), Tok);
+    *Rest = Tok;
+    return Nd;
 }
 
 static Node* assign(Token** Rest, Token* Tok) {

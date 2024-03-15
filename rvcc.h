@@ -115,8 +115,9 @@ typedef enum {
     ND_IF,          // 'if' statement
     ND_FOR,         // 'for' statement
     ND_ADDR,        // &
-    ND_DEREF,        // *
-    ND_FUNCALL      // Function calloc
+    ND_DEREF,       // *
+    ND_FUNCALL,     // Function calloc
+    ND_COMMA        // ,
 } NodeKind;
 
 
@@ -146,7 +147,7 @@ struct Node{
     Node* Inc;
     Token* Tok;
     Type* Ty;
-
+   
 };
 
 bool isInteger(Type *TY);

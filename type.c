@@ -104,7 +104,9 @@ void addType(Node* Nd) {
                 Nd->Ty = pointerTo(Ty);
             return;
         }
-
+        case ND_COMMA:
+             Nd->Ty = Nd->RHS->Ty;
+             return;
         case ND_DEREF: 
             if(!Nd->LHS->Ty->Base)
                 errorTok(Nd->Tok, "invalid pointer dereference");
