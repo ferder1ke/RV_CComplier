@@ -12,6 +12,8 @@ Obj* Globals;
 typedef struct Scope Scope;
 typedef struct VarScope VarScope;
 
+static Node* structRef(Node* LHS, Token* Tok); 
+static Type* structDecl(Token** Rest, Token* Tok); 
 struct Scope {
     Scope* Next;
     VarScope* Vars;
@@ -122,8 +124,17 @@ Type* declspec(Token** Rest, Token* Tok) {
         return TypeChar;
     }
 
-    *Rest = skip(Tok, "int");
-    return TypeInt;
+    if(equal(Tok, "int")) {
+        *Rest = Tok->Next;
+        return TypeInt;
+    }
+    
+    if(equal(Tok, "struct")) {
+        return structDecl(Rest, Tok->Next);
+    }
+    
+    errorTok(Tok, "typename expected");
+    return NULL;
 }
 
 Type* declarator(Token** Rest, Token* Tok, Type* Ty) {
@@ -239,7 +250,7 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 }
 
 static bool isTypename(Token* Tok) {
-    if(equal(Tok, "int") || equal(Tok, "char"))
+    if(equal(Tok, "int") || equal(Tok, "char") || equal(Tok, "struct"))
         return true;
     return false;
 }
@@ -261,7 +272,7 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 
 // program = (functionDefinition | globalVariable)*
 // functionDefinition = declspec declarator "{" compoundStmt*
-// declspec = "int" | "char"
+// declspec = "int" | "char" | "structDecl"
 // declarator = "*"* ident typeSuffix
 // typeSuffix = ("(" funcParams? ")")?
 // funcParams = param ("," param)*
@@ -289,7 +300,7 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 // add = mul ("+" mul | "-" mul)*
 //mul = unary ("*" unary | "/" unary)*
 //unary = (+ | - | * | &) unary |  postfix
-//postfix = primary ("[" expr "]")*
+//postfix = primary ("[" expr "]" | "." indent)*
 
 //primary = "(" "{" stmt+  "}" ")"
 //          | "(" expr ")" 
@@ -298,6 +309,8 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 //          | ident func-args? 
 //          | str
 
+// structMembers = (declspec declarator (","  declarator)* ";")*
+// structDecl = "{" structMembers
 //funcall = indent "("(assign (, assign)?)?")"
 //preorder
 
@@ -536,14 +549,22 @@ static Node* unary(Token** Rest, Token* Tok) {
 
 static Node* postfix(Token** Rest, Token* Tok) {
     Node* Nd =  primary(&Tok, Tok);
-    while(equal(Tok, "[")) {
-        Token* Start = Tok;
-        Node* Idx = expr(&Tok, Tok->Next);
-        Tok = skip(Tok, "]");
-        Nd = newUnary(ND_DEREF, newAdd(Nd, Idx, Start), Start);
+    while(true) {
+        if(equal(Tok, "[")) {
+            Token* Start = Tok;
+            Node* Idx = expr(&Tok, Tok->Next);
+            Tok = skip(Tok, "]");
+            Nd = newUnary(ND_DEREF, newAdd(Nd, Idx, Start), Start);
+            continue;
+        }
+        if(equal(Tok, ".")) {
+            Nd = structRef(Nd, Tok->Next); 
+            Tok = Tok->Next->Next;
+            continue;
+        }
+        *Rest = Tok;
+        return Nd;
     }
-    *Rest = Tok;
-    return Nd;
 }
 
 static Node* primary(Token** Rest, Token* Tok) {
@@ -642,6 +663,63 @@ static bool isFunction(Token* Tok) {
     Type Dummy = {};
     Type* Ty = declarator(&Tok, Tok, &Dummy);
     return Ty->typeKind == TypeFunc;
+}
+
+static void structMembers(Token** Rest, Token* Tok, Type* Ty){
+    Member Head = {};
+    Member* Cur = &Head;
+
+    while(!equal(Tok, "}")) {
+        Type* BaseTy = declspec(&Tok, Tok);    
+        int First = true;
+        while(!consume(&Tok, Tok, ";")) {
+            if(!First) {
+                Tok = skip(Tok, ",");
+            }
+            First = false;
+            Member* Mem = calloc(1, sizeof(Member));
+            Mem->Ty = declarator(&Tok, Tok, BaseTy);
+            Mem->Name = Mem->Ty->Name;
+            Cur = Cur->Next = Mem;
+        }
+    }
+    *Rest = Tok->Next;
+    Ty->Mem = Head.Next;
+}
+
+static Type* structDecl(Token** Rest, Token* Tok) { //struct declaration
+    Tok = skip(Tok, "{");
+    Type* Ty = calloc(1, sizeof(Type));
+    Ty->typeKind = TypeSTRUCT;
+    
+    int Offset = 0;
+    structMembers(Rest, Tok, Ty); //struct members Inits
+
+    for(Member* mem = Ty->Mem; mem; mem = mem->Next) {
+        mem->Offset = Offset;
+        Offset += mem->Ty->Size;
+    }
+    Ty->Size = Offset;
+    return Ty;
+}
+
+static Member* getStructMember(Type* Ty, Token* Tok) {
+    for(Member* mem = Ty->Mem; mem; mem = mem->Next) {
+        if (mem->Name->Len == Tok->Len &&
+        !strncmp(mem->Name->Pos, Tok->Pos, Tok->Len))
+        return mem;
+    }
+    errorTok(Tok, "no such member");
+    return NULL;
+}
+
+static Node* structRef(Node* LHS, Token* Tok) {
+    addType(LHS);
+    if(LHS->Ty->typeKind != TypeSTRUCT)
+         errorTok(LHS->Tok, "not a struct");
+    Node *Nd = newUnary(ND_MEMBER, LHS, Tok);
+    Nd->Mem = getStructMember(LHS->Ty, Tok);
+    return Nd;
 }
 
 Obj* parse(Token *Tok) {

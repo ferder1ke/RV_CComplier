@@ -19,6 +19,8 @@ static char *ArgReg[] = {"a0", "a1", "a2", "a3", "a4", "a5"};
 
 typedef struct Type Type;
 typedef struct Node Node;
+typedef struct Member Member;
+
 typedef enum {
     TK_PUNCT,
     TK_NUM,
@@ -55,7 +57,8 @@ typedef enum {
     TypePTR,   //pointer
     TypeFunc,  //Function
     TypeARRAY, //Arrary
-    TypeCHAR   //Char
+    TypeCHAR,  //Char
+    TypeSTRUCT //Struct
 }TypeKind;
 
 
@@ -68,7 +71,7 @@ struct Type {
     Token* Name;
     
     int ArraryLen;
-   
+    Member* Mem; 
     //Function
     Type* ReturnTy;
     Type* Param;
@@ -117,7 +120,8 @@ typedef enum {
     ND_ADDR,        // &
     ND_DEREF,       // *
     ND_FUNCALL,     // Function calloc
-    ND_COMMA        // ,
+    ND_COMMA,       // ,
+    ND_MEMBER       // Member
 } NodeKind;
 
 
@@ -139,7 +143,8 @@ struct Node{
 
     char* FuncName;
     Node* Args;
-
+    
+    Member* Mem;
     Node* Cond;
     Node* Els;
     Node* Then;
@@ -148,6 +153,13 @@ struct Node{
     Token* Tok;
     Type* Ty;
    
+};
+
+struct Member {
+    Member* Next;
+    int Offset;
+    Type* Ty;
+    Token* Name;
 };
 
 bool isInteger(Type *TY);
