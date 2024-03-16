@@ -66,7 +66,8 @@ typedef enum {
 struct Type {
     TypeKind typeKind;
     int Size;
-    
+    int Align;
+
     Type* Base;
     Token* Name;
     

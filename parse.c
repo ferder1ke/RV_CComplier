@@ -691,15 +691,18 @@ static Type* structDecl(Token** Rest, Token* Tok) { //struct declaration
     Tok = skip(Tok, "{");
     Type* Ty = calloc(1, sizeof(Type));
     Ty->typeKind = TypeSTRUCT;
-    
+    Ty->Align = 1; 
     int Offset = 0;
     structMembers(Rest, Tok, Ty); //struct members Inits
 
     for(Member* mem = Ty->Mem; mem; mem = mem->Next) {
+        Offset = alignTo(Offset, mem->Ty->Align);
         mem->Offset = Offset;
         Offset += mem->Ty->Size;
+        if(Ty->Align < mem->Ty->Align) 
+            Ty->Align = mem->Ty->Align;
     }
-    Ty->Size = Offset;
+    Ty->Size = alignTo(Offset, Ty->Align);
     return Ty;
 }
 

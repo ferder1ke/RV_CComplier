@@ -7,13 +7,23 @@
 
 Type* TypeInt = &(Type){
     TypeINT,
-    8 //8 byte
+    8, //8 byte
+    8  // Align
 };
 
 Type* TypeChar = &(Type) {
     TypeCHAR,
-    1 //1 byte
+    1, //1 byte
+    1  // Align
 };
+
+Type* newType(TypeKind Kind, int Size, int Align) {
+    Type* Ty = calloc(1, sizeof(Type));
+    Ty->typeKind = Kind;
+    Ty->Size = Size;
+    Ty->Align = Align;
+    return Ty;
+}
 
 bool isInteger(Type* TY) {
     return TY->typeKind == TypeINT || TY->typeKind == TypeCHAR;
@@ -26,10 +36,8 @@ Type* copyType(Type* Ty) {
 }
 
 Type* pointerTo(Type* Base) {
-    Type* Ty = calloc(1, sizeof(Type));
-    Ty->typeKind = TypePTR;
+    Type* Ty = newType(TypePTR, 8, 8);
     Ty->Base = Base;
-    Ty->Size = 8;
     return Ty;
 }
 
@@ -41,10 +49,8 @@ Type* funcType(Type* ReturnTy) {
 }
 
 Type* arrayof(Type* Base, int Len) {
-    Type* Ty = calloc(1, sizeof(Type));
-    Ty->typeKind = TypeARRAY;
+    Type* Ty = newType(TypeARRAY, Base->Size * Len, Base->Align);
     Ty->Base = Base;
-    Ty->Size = Base->Size * Len;
     Ty->ArraryLen = Len;
 
     return Ty;

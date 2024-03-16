@@ -70,7 +70,7 @@ static void store(Type* Ty) {
 
 
 // 对齐到Align的整数倍
-static int alignTo(int N, int Align) {
+int alignTo(int N, int Align) {
   // (0,Align]返回Align
   return (N + Align - 1) / Align * Align;
 }
