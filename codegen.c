@@ -48,7 +48,7 @@ static void pop(char *Reg) {
 }
 
 static void load(Type* Ty) {
-    if(Ty->typeKind == TypeARRAY)
+    if(Ty->typeKind == TypeARRAY || Ty->typeKind == TypeSTRUCT || Ty->typeKind == TypeUNION)
         return;
     if(Ty->Size == 1){
     printLn("  # 读取a0中存放的地址，得到的值存入a0");
@@ -62,6 +62,20 @@ static void load(Type* Ty) {
 static void store(Type* Ty) {
   pop("a1");
   printLn("  # 将a0的值，写入到a1中存放的地址");
+  if (Ty->typeKind == TypeSTRUCT || Ty->typeKind == TypeUNION) {
+    printLn("  # 对%s进行赋值", Ty->typeKind == TypeSTRUCT ? "结构体" : "联合体");
+    for (int I = 0; I < Ty->Size; ++I) {
+      printLn("  li t0, %d", I);
+      printLn("  add t0, a0, t0");
+      printLn("  lb t1, 0(t0)");
+
+      printLn("  li t0, %d", I);
+      printLn("  add t0, a1, t0");
+      printLn("  sb t1, 0(t0)");
+    }
+    return;
+  }
+
   if(Ty->Size == 1)
     printLn("  sb a0, 0(a1)");
   else
