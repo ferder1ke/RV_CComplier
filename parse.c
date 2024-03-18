@@ -324,7 +324,7 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 // add = mul ("+" mul | "-" mul)*
 //mul = unary ("*" unary | "/" unary)*
 //unary = (+ | - | * | &) unary |  postfix
-//postfix = primary ("[" expr "]" | "." indent)*
+//postfix = primary ("[" expr "]" | "." indent | "->" indent)*
 
 //primary = "(" "{" stmt+  "}" ")"
 //          | "(" expr ")" 
@@ -574,6 +574,7 @@ static Node* unary(Token** Rest, Token* Tok) {
 static Node* postfix(Token** Rest, Token* Tok) {
     Node* Nd =  primary(&Tok, Tok);
     while(true) {
+        
         if(equal(Tok, "[")) {
             Token* Start = Tok;
             Node* Idx = expr(&Tok, Tok->Next);
@@ -581,7 +582,15 @@ static Node* postfix(Token** Rest, Token* Tok) {
             Nd = newUnary(ND_DEREF, newAdd(Nd, Idx, Start), Start);
             continue;
         }
+
         if(equal(Tok, ".")) {
+            Nd = structRef(Nd, Tok->Next); 
+            Tok = Tok->Next->Next;
+            continue;
+        }
+
+        if(equal(Tok, "->")) {
+            Nd = newUnary(ND_DEREF, Nd, Tok);
             Nd = structRef(Nd, Tok->Next); 
             Tok = Tok->Next->Next;
             continue;

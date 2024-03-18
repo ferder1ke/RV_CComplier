@@ -9,6 +9,9 @@
 
 int main() {
   
+  ASSERT(3, ({ struct t {char a;} x; struct t *y = &x; x.a=3; y->a; }));
+  ASSERT(3, ({ struct t {char a;} x; struct t *y = &x; y->a=3; x.a; }));
+
   ASSERT(16, ({ struct t {int a; int b;} x; struct t y; sizeof(y); }));
   ASSERT(16, ({ struct t {int a; int b;}; struct t y; sizeof(y); }));
   ASSERT(2, ({ struct t {char a[2];}; { struct t {char a[4];}; } struct t y; sizeof(y); }));
