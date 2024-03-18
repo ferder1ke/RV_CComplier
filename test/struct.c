@@ -8,7 +8,12 @@
 #include "test.h"
 
 int main() {
-  // [49] 支持struct
+  
+  ASSERT(16, ({ struct t {int a; int b;} x; struct t y; sizeof(y); }));
+  ASSERT(16, ({ struct t {int a; int b;}; struct t y; sizeof(y); }));
+  ASSERT(2, ({ struct t {char a[2];}; { struct t {char a[4];}; } struct t y; sizeof(y); }));
+  ASSERT(3, ({ struct t {int x;}; int t=1; struct t y; y.x=2; t+y.x; }));
+
   ASSERT(1, ({ struct {int a; int b;} x; x.a=1; x.b=2; x.a; }));
   ASSERT(2, ({ struct {int a; int b;} x; x.a=1; x.b=2; x.b; }));
   ASSERT(1, ({ struct {char a; int b; char c;} x; x.a=1; x.b=2; x.c=3; x.a; }));

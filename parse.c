@@ -11,12 +11,21 @@ Obj* Globals;
 
 typedef struct Scope Scope;
 typedef struct VarScope VarScope;
+typedef struct TagScope TagScope;
+
+struct TagScope {
+    TagScope* Next;
+    char* Name;
+    Type* Ty;
+};
 
 static Node* structRef(Node* LHS, Token* Tok); 
 static Type* structDecl(Token** Rest, Token* Tok); 
+
 struct Scope {
     Scope* Next;
     VarScope* Vars;
+    TagScope* Tags;
 };
 
 struct VarScope {
@@ -38,6 +47,21 @@ static void leaveScope(void) {
     Scp = Scp->Next;
 }
 
+static Type* findTag(Token* Tok) {
+    for(Scope* S = Scp; S; S = S->Next) 
+        for(TagScope* S2 = S->Tags; S2; S2 = S2->Next)
+            if(equal(Tok, S2->Name))
+                return S2->Ty;
+    return NULL;
+}
+
+static void* pushTagScope(Token* Tok, Type* Ty) {
+    TagScope* S = calloc(1, sizeof(TagScope));
+    S->Ty = Ty;
+    S->Name = strndup(Tok->Pos, Tok->Len);
+    S->Next = Scp->Tags;
+    Scp->Tags = S; 
+}
 
 static Obj* findVar(Token* Tok) {
     for(Scope* S = Scp; S; S = S->Next) 
@@ -688,12 +712,26 @@ static void structMembers(Token** Rest, Token* Tok, Type* Ty){
 }
 
 static Type* structDecl(Token** Rest, Token* Tok) { //struct declaration
-    Tok = skip(Tok, "{");
+    Token* Tag = NULL;
+    if(Tok->Kind == TK_IDENT) {
+        Tag = Tok;
+        Tok = Tok->Next;
+    }
+
+    if(Tag && !equal(Tok, "{")) {
+        Type* Ty = findTag(Tag);
+        if(!Ty) {
+            errorTok(Tag, "unknown struct Type");
+        }
+        *Rest = Tok;
+        return Ty;
+    }
+
     Type* Ty = calloc(1, sizeof(Type));
     Ty->typeKind = TypeSTRUCT;
     Ty->Align = 1; 
     int Offset = 0;
-    structMembers(Rest, Tok, Ty); //struct members Inits
+    structMembers(Rest, Tok->Next, Ty); //struct members Inits
 
     for(Member* mem = Ty->Mem; mem; mem = mem->Next) {
         Offset = alignTo(Offset, mem->Ty->Align);
@@ -703,6 +741,8 @@ static Type* structDecl(Token** Rest, Token* Tok) { //struct declaration
             Ty->Align = mem->Ty->Align;
     }
     Ty->Size = alignTo(Offset, Ty->Align);
+    if(Tag)
+        pushTagScope(Tag, Ty);
     return Ty;
 }
 
