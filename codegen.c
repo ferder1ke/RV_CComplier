@@ -343,6 +343,7 @@ static void assignLVarOffsets(Obj *Prog) {
       // 每个变量分配8字节
       Offset += Var->Ty->Size;
       // 为每个变量赋一个偏移量，或者说是栈中地址
+      Offset = alignTo(Offset, Var->Ty->Align);
       Var->Offset = -Offset;
     }
     // 将栈对齐到16字节

@@ -3,6 +3,10 @@
 int g1, g2[4];
 
 int main() {
+
+  ASSERT(15, ({ int x; int y; char z; char *a=&y; char *b=&z; b-a; }));
+  ASSERT(1, ({ int x; char y; int z; char *a=&y; char *b=&z; b-a; }));
+
   // [10] 支持单字母变量
   ASSERT(3, ({ int a; a=3; a; }));
   ASSERT(3, ({ int a=3; a; }));
