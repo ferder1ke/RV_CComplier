@@ -21,6 +21,7 @@ struct TagScope {
 
 static Node* structRef(Node* LHS, Token* Tok); 
 static Type* structDecl(Token** Rest, Token* Tok); 
+static Type* unionDecl(Token** Rest, Token* Tok);
 
 struct Scope {
     Scope* Next;
@@ -157,6 +158,10 @@ Type* declspec(Token** Rest, Token* Tok) {
         return structDecl(Rest, Tok->Next);
     }
     
+    if(equal(Tok, "union")) {
+        return unionDecl(Rest, Tok->Next);
+    }
+
     errorTok(Tok, "typename expected");
     return NULL;
 }
@@ -274,7 +279,7 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 }
 
 static bool isTypename(Token* Tok) {
-    if(equal(Tok, "int") || equal(Tok, "char") || equal(Tok, "struct"))
+    if(equal(Tok, "int") || equal(Tok, "char") || equal(Tok, "struct") || equal(Tok, "union"))
         return true;
     return false;
 }
@@ -296,7 +301,7 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 
 // program = (functionDefinition | globalVariable)*
 // functionDefinition = declspec declarator "{" compoundStmt*
-// declspec = "int" | "char" | "structDecl"
+// declspec = "int" | "char" | "structDecl" | "unionDecl"
 // declarator = "*"* ident typeSuffix
 // typeSuffix = ("(" funcParams? ")")?
 // funcParams = param ("," param)*
@@ -334,7 +339,10 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 //          | str
 
 // structMembers = (declspec declarator (","  declarator)* ";")*
-// structDecl = "{" structMembers
+// structDecl = structUnionDecl
+// unionDecl = structUnionDecl
+// structUnionDecl = ident? ("{" structMembers)?
+
 //funcall = indent "("(assign (, assign)?)?")"
 //preorder
 
@@ -720,7 +728,7 @@ static void structMembers(Token** Rest, Token* Tok, Type* Ty){
     Ty->Mem = Head.Next;
 }
 
-static Type* structDecl(Token** Rest, Token* Tok) { //struct declaration
+static Type* structUnionDecl(Token** Rest, Token* Tok) { //struct declaration
     Token* Tag = NULL;
     if(Tok->Kind == TK_IDENT) {
         Tag = Tok;
@@ -735,13 +743,22 @@ static Type* structDecl(Token** Rest, Token* Tok) { //struct declaration
         *Rest = Tok;
         return Ty;
     }
-
+    
     Type* Ty = calloc(1, sizeof(Type));
     Ty->typeKind = TypeSTRUCT;
-    Ty->Align = 1; 
-    int Offset = 0;
     structMembers(Rest, Tok->Next, Ty); //struct members Inits
+    Ty->Align = 1; 
+    
+    if(Tag)
+        pushTagScope(Tag, Ty);
+    return Ty;
+}
 
+static Type* structDecl(Token** Rest, Token* Tok) { //struct declaration
+    Type* Ty = structUnionDecl(Rest, Tok);
+    Ty->typeKind = TypeSTRUCT;
+    
+    int Offset = 0;
     for(Member* mem = Ty->Mem; mem; mem = mem->Next) {
         Offset = alignTo(Offset, mem->Ty->Align);
         mem->Offset = Offset;
@@ -750,8 +767,21 @@ static Type* structDecl(Token** Rest, Token* Tok) { //struct declaration
             Ty->Align = mem->Ty->Align;
     }
     Ty->Size = alignTo(Offset, Ty->Align);
-    if(Tag)
-        pushTagScope(Tag, Ty);
+    return Ty;
+}
+
+static Type* unionDecl(Token** Rest, Token* Tok) { //union declaration
+    Type* Ty = structUnionDecl(Rest, Tok);
+    Ty->typeKind = TypeUNION;
+
+    for(Member* mem = Ty->Mem; mem; mem = mem->Next) {
+        if(Ty->Align < mem->Ty->Align)
+            Ty->Align = mem->Ty->Align;
+        if(Ty->Size < mem->Ty->Size)
+            Ty->Size = mem->Ty->Size;
+    }
+
+    Ty->Size = alignTo(Ty->Size, Ty->Align);
     return Ty;
 }
 
@@ -767,7 +797,7 @@ static Member* getStructMember(Type* Ty, Token* Tok) {
 
 static Node* structRef(Node* LHS, Token* Tok) {
     addType(LHS);
-    if(LHS->Ty->typeKind != TypeSTRUCT)
+    if(LHS->Ty->typeKind != TypeSTRUCT && LHS->Ty->typeKind != TypeUNION)
          errorTok(LHS->Tok, "not a struct");
     Node *Nd = newUnary(ND_MEMBER, LHS, Tok);
     Nd->Mem = getStructMember(LHS->Ty, Tok);

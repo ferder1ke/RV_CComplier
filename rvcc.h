@@ -53,12 +53,13 @@ Token *skip(Token *Tok, char *Str);
 Token *tokenizeFile(char *Path);
 
 typedef enum {
-    TypeINT,   //int
-    TypePTR,   //pointer
-    TypeFunc,  //Function
-    TypeARRAY, //Arrary
-    TypeCHAR,  //Char
-    TypeSTRUCT //Struct
+    TypeINT,    //int
+    TypePTR,    //pointer
+    TypeFunc,   //Function
+    TypeARRAY,  //Arrary
+    TypeCHAR,   //Char
+    TypeSTRUCT, //Struct
+    TypeUNION   //Union
 }TypeKind;
 
 
