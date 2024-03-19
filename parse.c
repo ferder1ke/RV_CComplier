@@ -180,6 +180,14 @@ Type* declarator(Token** Rest, Token* Tok, Type* Ty) {
     while(consume(&Tok, Tok, "*")) {
         Ty = pointerTo(Ty);
     }
+    if(equal(Tok, "(")) {
+        Type Dummy = {};
+        Token* Start = Tok;
+        declarator(&Tok, Tok->Next, &Dummy);
+        Tok = skip(Tok, ")");
+        Ty = typeSuffix(Rest, Tok, Ty);
+        return declarator(&Tok, Start->Next, Ty);
+    }
     if(Tok->Kind != TK_IDENT){
         errorTok(Tok, "expected a varibles Name");
     }
