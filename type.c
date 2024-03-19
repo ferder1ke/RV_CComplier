@@ -7,13 +7,19 @@
 
 Type* TypeInt = &(Type){
     TypeINT,
-    4, //8 byte
+    4, // 4 byte
     4  // Align
+};
+
+Type* TypeLong = &(Type){
+    TypeLONG,
+    8, // 8 byte
+    8  // Align
 };
 
 Type* TypeChar = &(Type) {
     TypeCHAR,
-    1, //1 byte
+    1, // 1 byte
     1  // Align
 };
 
@@ -26,7 +32,8 @@ Type* newType(TypeKind Kind, int Size, int Align) {
 }
 
 bool isInteger(Type* TY) {
-    return TY->typeKind == TypeINT || TY->typeKind == TypeCHAR;
+    TypeKind K = TY->typeKind;
+    return K == TypeINT || K == TypeCHAR || K == TypeLONG;
 }
 
 Type* copyType(Type* Ty) {
@@ -95,7 +102,7 @@ void addType(Node* Nd) {
         case ND_LT:
         case ND_LE:
         case ND_NUM:
-            Nd->Ty = TypeInt;
+            Nd->Ty = TypeLong;
             return;
 
         case ND_VAR:

@@ -3,7 +3,9 @@
 int g1, g2[4];
 
 int main() {
-  // [10] 支持单字母变量
+  
+  ASSERT(8, ({ long x; sizeof(x); }));
+    // [10] 支持单字母变量
   ASSERT(3, ({ int a; a=3; a; }));
   ASSERT(3, ({ int a=3; a; }));
   ASSERT(8, ({ int a=3; int z=5; a+z; }));

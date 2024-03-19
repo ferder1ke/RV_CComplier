@@ -81,7 +81,7 @@ static VarScope* pushScope(char* Name, Obj* Var) {
     return S;
 }
 
-static int getNumber(Token* Tok) {
+static long getNumber(Token* Tok) {
     if(Tok->Kind != TK_NUM)
         errorTok(Tok, "expected number");
     return Tok->Val;    
@@ -109,7 +109,7 @@ static Node* newBinary(NodeKind Kind, Node* LHS, Node* RHS, Token* Tok) {
     return Nd;
 }
 
-static Node* newNum(int Val, Token* Tok) {
+static Node* newNum(int64_t Val, Token* Tok) {
     Node* Nd = newNode(ND_NUM, Tok);
     Nd->Val = Val;
     return Nd;
@@ -152,6 +152,11 @@ Type* declspec(Token** Rest, Token* Tok) {
     if(equal(Tok, "int")) {
         *Rest = Tok->Next;
         return TypeInt;
+    }
+    
+    if(equal(Tok, "long")) {
+        *Rest = Tok->Next;
+        return TypeLong;
     }
     
     if(equal(Tok, "struct")) {
@@ -279,7 +284,7 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 }
 
 static bool isTypename(Token* Tok) {
-    if(equal(Tok, "int") || equal(Tok, "char") || equal(Tok, "struct") || equal(Tok, "union"))
+    if(equal(Tok, "int") || equal(Tok, "long") || equal(Tok, "char") || equal(Tok, "struct") || equal(Tok, "union"))
         return true;
     return false;
 }
@@ -301,7 +306,7 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 
 // program = (functionDefinition | globalVariable)*
 // functionDefinition = declspec declarator "{" compoundStmt*
-// declspec = "int" | "char" | "structDecl" | "unionDecl"
+// declspec = "int" | "char" | "structDecl" | "unionDecl | "long""
 // declarator = "*"* ident typeSuffix
 // typeSuffix = ("(" funcParams? ")")?
 // funcParams = param ("," param)*

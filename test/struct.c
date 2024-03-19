@@ -1,6 +1,11 @@
 #include "test.h"
 
 int main() {
+
+  ASSERT(16, ({ struct {char a; long b;} x; sizeof(x); }));
+
+
+
   // [49] 支持struct
   ASSERT(1, ({ struct {int a; int b;} x; x.a=1; x.b=2; x.a; }));
   ASSERT(2, ({ struct {int a; int b;} x; x.a=1; x.b=2; x.b; }));

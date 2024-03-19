@@ -16,6 +16,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <stdint.h>
 
 static char *ArgReg[] = {"a0", "a1", "a2", "a3", "a4", "a5"};
 
@@ -37,7 +38,7 @@ typedef struct Token Token;
 struct Token{
     TokenKind Kind;
     Token* Next;
-    int Val;
+    int64_t Val;
     int Len;
     char* Pos; 
 
@@ -56,6 +57,7 @@ Token *tokenizeFile(char *Path);
 
 typedef enum {
     TypeINT,    //int
+    TypeLONG,   //long
     TypePTR,    //pointer
     TypeFunc,   //Function
     TypeARRAY,  //Arrary
@@ -130,6 +132,7 @@ typedef enum {
 
 
 extern Type* TypeInt;
+extern Type* TypeLong;
 extern Type* TypeChar;
 
 Type* pointerTo(Type* Base);
@@ -137,7 +140,7 @@ Type* pointerTo(Type* Base);
 typedef struct Node Node;
 struct Node{
     NodeKind Kind;
-    int Val;
+    int64_t Val;
     Node* Next;
     Node* LHS;
     Node* RHS;

@@ -81,7 +81,7 @@ static int readPunct(char* P) {
 }
 
 static bool isKeyWord(Token* Tok) {
-    static char* Kw[] = {"return", "if", "else", "for" ,"while", "int", "sizeof", "char", "struct", "union"};
+    static char* Kw[] = {"return", "if", "else", "for" ,"while", "int", "long", "sizeof", "char", "struct", "union"};
     for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); i++) {
         if(equal(Tok, Kw[i]))
             return true;
@@ -112,11 +112,6 @@ bool consume(Token** Rest, Token* Tok, char* Str) {
     return false;
 }
 
-static int getNum(Token* Tok) {
-    if(Tok->Kind != TK_NUM)
-        errorTok(Tok, "expect number!");
-    return Tok->Val;
-}
 
 static Token* genToken(TokenKind Kind, char* Start, char* End) {
     Token* Tok = calloc(1, sizeof(Token));
