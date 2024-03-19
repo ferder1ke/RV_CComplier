@@ -159,6 +159,11 @@ Type* declspec(Token** Rest, Token* Tok) {
         return TypeLong;
     }
     
+    if(equal(Tok, "short")) {
+        *Rest = Tok->Next;
+        return TypeShort;
+    }
+
     if(equal(Tok, "struct")) {
         return structDecl(Rest, Tok->Next);
     }
@@ -284,7 +289,7 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 }
 
 static bool isTypename(Token* Tok) {
-    if(equal(Tok, "int") || equal(Tok, "long") || equal(Tok, "char") || equal(Tok, "struct") || equal(Tok, "union"))
+    if(equal(Tok, "int") || equal(Tok, "long") || equal(Tok, "short") || equal(Tok, "char") || equal(Tok, "struct") || equal(Tok, "union"))
         return true;
     return false;
 }
@@ -306,7 +311,7 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 
 // program = (functionDefinition | globalVariable)*
 // functionDefinition = declspec declarator "{" compoundStmt*
-// declspec = "int" | "char" | "structDecl" | "unionDecl | "long""
+// declspec = "int" | "long" | "short" | "char" | "structDecl" | "unionDecl" 
 // declarator = "*"* ident typeSuffix
 // typeSuffix = ("(" funcParams? ")")?
 // funcParams = param ("," param)*

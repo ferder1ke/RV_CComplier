@@ -5,6 +5,12 @@
  ************************************************************************/
 #include "rvcc.h"
 
+Type* TypeShort = &(Type){
+    TypeSHORT,
+    2, // 2 byte
+    2  // Align
+};
+
 Type* TypeInt = &(Type){
     TypeINT,
     4, // 4 byte
@@ -33,7 +39,7 @@ Type* newType(TypeKind Kind, int Size, int Align) {
 
 bool isInteger(Type* TY) {
     TypeKind K = TY->typeKind;
-    return K == TypeINT || K == TypeCHAR || K == TypeLONG;
+    return K == TypeINT || K == TypeCHAR || K == TypeLONG || K == TypeSHORT;
 }
 
 Type* copyType(Type* Ty) {

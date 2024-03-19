@@ -1,5 +1,7 @@
 #include "test.h"
-
+int sub_short(short a, short b, short c) {
+  return a - b - c;
+}
 int ret3() {
   return 3;
   return 5;

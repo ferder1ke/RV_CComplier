@@ -58,6 +58,7 @@ Token *tokenizeFile(char *Path);
 typedef enum {
     TypeINT,    //int
     TypeLONG,   //long
+    TypeSHORT,  //short
     TypePTR,    //pointer
     TypeFunc,   //Function
     TypeARRAY,  //Arrary
@@ -65,8 +66,6 @@ typedef enum {
     TypeSTRUCT, //Struct
     TypeUNION   //Union
 }TypeKind;
-
-
 
 struct Type {
     TypeKind typeKind;
@@ -134,6 +133,7 @@ typedef enum {
 extern Type* TypeInt;
 extern Type* TypeLong;
 extern Type* TypeChar;
+extern Type* TypeShort;
 
 Type* pointerTo(Type* Base);
 
