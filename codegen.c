@@ -428,7 +428,7 @@ static void emitData(Obj* Prog) {
 void emitText(Obj *Prog) {
 
   for (Obj *Fn = Prog; Fn; Fn = Fn->Next) {
-    if(!Fn->IsFunction)
+    if(!Fn->IsFunction || !Fn->IsDefinition)
         continue;
       printLn("\n  # 定义全局%s段", Fn->Name);
       printLn("  .globl %s", Fn->Name);

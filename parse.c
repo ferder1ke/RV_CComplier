@@ -691,6 +691,11 @@ static Token* function(Token* Tok, Type* BaseTy) {
 
     Obj* Fn = newGVar(genIdent(Ty->Name), Ty);
     Fn->IsFunction = true;
+
+    Fn->IsDefinition = !consume(&Tok, Tok, ";");
+    if(!Fn->IsDefinition)
+        return Tok;
+
     Locals = NULL;
     enterScope(); 
     createParamLVars(Ty->Param);

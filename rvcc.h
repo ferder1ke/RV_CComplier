@@ -94,6 +94,7 @@ struct Obj {
   int Offset; 
   //Function
   bool IsFunction;
+  bool IsDefinition;
   Obj* Param;
 
   char* InitData;
