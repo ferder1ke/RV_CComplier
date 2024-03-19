@@ -5,6 +5,8 @@
 > Description:   
  ************************************************************************/
 #define _POSIX_C_SOURCE 200809L
+#define unreachable() error("internal error at %s:%d", __FILE__, __LINE__)
+
 
 #include <assert.h>
 #include <stdio.h>

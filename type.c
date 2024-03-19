@@ -7,8 +7,8 @@
 
 Type* TypeInt = &(Type){
     TypeINT,
-    8, //8 byte
-    8  // Align
+    4, //8 byte
+    4  // Align
 };
 
 Type* TypeChar = &(Type) {
