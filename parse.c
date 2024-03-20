@@ -22,6 +22,7 @@ struct TagScope {
 static Node* structRef(Node* LHS, Token* Tok); 
 static Type* structDecl(Token** Rest, Token* Tok); 
 static Type* unionDecl(Token** Rest, Token* Tok);
+static bool isTypename(Token* Tok);
 
 struct Scope {
     Scope* Next;
@@ -144,41 +145,68 @@ static Obj* newGVar(char* Name, Type* Ty) {
 }
 
 Type* declspec(Token** Rest, Token* Tok) {
-    if(equal(Tok, "char")) {
-        *Rest = Tok->Next;
-        return TypeChar;
-    }
+    enum {
+        VOID = 1 << 0,
+        CHAR = 1 << 2,
+        SHORT = 1 << 4,
+        INT = 1 << 6,
+        LONG = 1 << 8,
+        OTHER = 1 << 10,
+    };
 
-    if(equal(Tok, "void")) {
-        *Rest = Tok->Next;
-        return TypeVoid;
-    }
-
-    if(equal(Tok, "int")) {
-        *Rest = Tok->Next;
-        return TypeInt;
-    }
+    int Counter = 0;
+    Type* Ty = TypeInt;
     
-    if(equal(Tok, "long")) {
-        *Rest = Tok->Next;
-        return TypeLong;
-    }
-    
-    if(equal(Tok, "short")) {
-        *Rest = Tok->Next;
-        return TypeShort;
-    }
+    while(isTypename(Tok)) {
+        if(equal(Tok, "struct") || equal(Tok, "union")) {
+            if(equal(Tok, "struct"))
+                Ty = structDecl(&Tok, Tok->Next);
+            if(equal(Tok, "union"))
+                Ty = unionDecl(&Tok, Tok->Next);
+            Counter += OTHER;
+            continue;
+        }
+        
 
-    if(equal(Tok, "struct")) {
-        return structDecl(Rest, Tok->Next);
-    }
-    
-    if(equal(Tok, "union")) {
-        return unionDecl(Rest, Tok->Next);
-    }
+        if(equal(Tok, "char")) {
+            Counter += CHAR;
+        }else if(equal(Tok, "void")) {
+            Counter += VOID;
+        }else if(equal(Tok, "int")) {
+            Counter += INT;
+        }else if(equal(Tok, "long")) {
+            Counter += LONG;
+        }else if(equal(Tok, "short")) {
+            Counter += SHORT;
+        }else {
+            unreachable();
+        }
 
-    errorTok(Tok, "typename expected");
-    return NULL;
+        switch(Counter) {
+            case VOID:
+                 Ty = TypeVoid;
+                 break;
+            case INT:
+                 Ty = TypeInt;
+                 break;
+            case CHAR:
+                 Ty = TypeChar;
+                 break;
+            case SHORT:
+            case SHORT + INT: 
+                 Ty = TypeShort;
+                 break;
+            case LONG:
+            case LONG + INT:
+                 Ty = TypeLong;
+                 break;
+            default:
+                 errorTok(Tok, "invalid Type");
+        }
+        Tok = Tok->Next;
+    }
+    *Rest = Tok;
+    return Ty;
 }
 
 Type* declarator(Token** Rest, Token* Tok, Type* Ty) {
@@ -327,7 +355,7 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 
 // program = (functionDefinition | globalVariable)*
 // functionDefinition = declspec declarator "{" compoundStmt*
-// declspec = "int" | "long" | "short" | "char" | "structDecl" | "unionDecl" 
+// declspec = ("int" | "long" | "short" | "char" | "structDecl" | "unionDecl")+ 
 // declarator = "*"* ident typeSuffix
 // typeSuffix = ("(" funcParams? ")")?
 // funcParams = param ("," param)*
