@@ -34,8 +34,12 @@ struct VarScope {
     VarScope* Next;
     char* Name;
     Obj* Vars;
-
+    Type* Typedef;
 };
+
+typedef struct {
+    bool IsTypedef;
+} VarAttr;
 
 static Scope *Scp = &(Scope) {};
 
@@ -65,18 +69,17 @@ static void* pushTagScope(Token* Tok, Type* Ty) {
     Scp->Tags = S; 
 }
 
-static Obj* findVar(Token* Tok) {
+static VarScope* findVar(Token* Tok) {
     for(Scope* S = Scp; S; S = S->Next) 
         for(VarScope* S2 = S->Vars; S2; S2 = S2->Next)
             if(equal(Tok, S2->Name))
-                return S2->Vars;
+                return S2;
     return NULL;
 }
 
-static VarScope* pushScope(char* Name, Obj* Var) {
+static VarScope* pushScope(char* Name) {
     VarScope* S = calloc(1, sizeof(VarScope));
     S->Name = Name;
-    S->Vars = Var;
     S->Next = Scp->Vars;
     Scp->Vars = S; 
     return S;
@@ -126,7 +129,7 @@ static Obj* newVar(char* Name, Type* Ty) {
     Obj* Var = calloc(1, sizeof(Obj));
     Var->Name = Name;
     Var->Ty = Ty;
-    pushScope(Name, Var);
+    pushScope(Name)->Vars = Var;
     return Var;
 }
 static Obj* newLVar(char* Name, Type* Ty) {
@@ -144,7 +147,17 @@ static Obj* newGVar(char* Name, Type* Ty) {
     return Var;
 }
 
-Type* declspec(Token** Rest, Token* Tok) {
+static Type* findTypedef(Token* Tok) {
+    if(Tok->Kind == TK_IDENT) {
+        VarScope* S = findVar(Tok);
+        if(S) {
+            return S->Typedef;
+        }
+    }
+    return NULL;
+}
+
+Type* declspec(Token** Rest, Token* Tok, VarAttr* Attr) {
     enum {
         VOID = 1 << 0,
         CHAR = 1 << 2,
@@ -158,11 +171,29 @@ Type* declspec(Token** Rest, Token* Tok) {
     Type* Ty = TypeInt;
     
     while(isTypename(Tok)) {
-        if(equal(Tok, "struct") || equal(Tok, "union")) {
-            if(equal(Tok, "struct"))
+        if(equal(Tok, "typedef")) {
+            if(!Attr)
+                errorTok(Tok, "storage class specifier is not allowed in this context");
+            Attr->IsTypedef = true;
+            Tok = Tok->Next;
+            continue;
+        }
+        
+        //deTypedef
+        Type* Ty2 = findTypedef(Tok);
+        
+        if(equal(Tok, "struct") || equal(Tok, "union") || Ty2) {
+            // struct / union / typedef should be aligned left
+            if(Counter)
+                break;
+            if(equal(Tok, "struct")) {
                 Ty = structDecl(&Tok, Tok->Next);
-            if(equal(Tok, "union"))
+            }else if(equal(Tok, "union")) {
                 Ty = unionDecl(&Tok, Tok->Next);
+            }else {
+                Ty = Ty2;
+                Tok = Tok->Next;
+            }
             Counter += OTHER;
             continue;
         }
@@ -304,7 +335,7 @@ static Type* funcParams (Token** Rest, Token* Tok, Type* Ty) {
    while(!equal(Tok, ")")) {
        if(Cur != &Head)
            Tok = skip(Tok, ",");
-       Type* BaseTy = declspec(&Tok, Tok);
+       Type* BaseTy = declspec(&Tok, Tok, NULL);
        Type* DeclarTy = declarator(&Tok, Tok, BaseTy);
        Cur->Next = copyType(DeclarTy);
        Cur = Cur->Next;
@@ -332,12 +363,12 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 }
 
 static bool isTypename(Token* Tok) {
-    static char* Kw[] = {"int", "long", "short", "char", "struct", "union", "void"};
+    static char* Kw[] = {"int", "long", "short", "char", "struct", "union", "void", "typedef"};
     for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); i++) {
         if(equal(Tok, Kw[i]))
             return true;
     }
-    return false;
+    return findTypedef(Tok);
 }
 
 static char* newUniqueName(void) {
@@ -355,9 +386,11 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
     return Var;
 }
 
-// program = (functionDefinition | globalVariable)*
+// program = (typedef | functionDefinition | globalVariable)*
 // functionDefinition = declspec declarator "{" compoundStmt*
-// declspec = ("int" | "long" | "short" | "char" | "structDecl" | "unionDecl")+ 
+// declspec = ("int" | "long" | "short" | "char" 
+//                            | "typedef"
+//                            | "structDecl" | "unionDecl" | "typedefName")+ 
 // declarator = "*"* ident typeSuffix
 // typeSuffix = ("(" funcParams? ")")?
 // funcParams = param ("," param)*
@@ -365,7 +398,7 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 
 
 // program = "{" compoundStmt
-// compoundStmt = (declaration | stmt)* "}"
+// compoundStmt = (typedef | declaration | stmt)* "}"
 // declaration =
 //    declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
 
@@ -403,7 +436,7 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 // preorder
 
 static Node* compoundStmt(Token** Rest, Token* Tok);
-static Node* declaration(Token** Rest, Token* Tok);
+static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy);
 static Node* stmt(Token** Rest, Token* Tok);
 static Node* exprStmt(Token** Rest, Token* Tok);
 static Node* expr(Token** Rest, Token* Tok);
@@ -416,6 +449,7 @@ static Node* primary(Token** Rest, Token* Tok);
 static Node* postfix(Token** Rest, Token* Tok);
 static Node* unary(Token** Rest, Token* Tok);
 static Node* funcall(Token** Rest, Token* Tok);
+static Token* parseTypedef(Token* Tok, Type* BaseTy);
 
 static Node* compoundStmt(Token** Rest, Token* Tok) {
    Node* Nd = newNode(ND_BLOCK, Tok);
@@ -424,12 +458,17 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
    enterScope();
    while(!equal(Tok, "}")) {
        if(isTypename(Tok)) {
-           Cur->Next  = declaration(&Tok, Tok);
-           Cur = Cur->Next;
+           VarAttr Attr = {};
+           Type* BaseTy = declspec(&Tok, Tok, &Attr);
+           if(Attr.IsTypedef) {
+                Tok = parseTypedef(Tok, BaseTy);
+                continue;
+           }
+           Cur->Next  = declaration(&Tok, Tok, BaseTy);
        }else {
            Cur->Next = stmt(&Tok, Tok);
-           Cur = Cur->Next;
        }
+       Cur = Cur->Next;
        addType(Cur);
    }
    leaveScope();
@@ -438,9 +477,7 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
    return Nd;
 }
 
-static Node* declaration(Token** Rest, Token* Tok) {
-    Type* Basety = declspec(&Tok, Tok);
-    
+static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy) {
     Node Head = {};
     Node* Cur = &Head;
     
@@ -451,7 +488,7 @@ static Node* declaration(Token** Rest, Token* Tok) {
             Tok = skip(Tok, ",");
         }
         
-        Type* Ty = declarator(&Tok, Tok, Basety);
+        Type* Ty = declarator(&Tok, Tok, BaseTy);
         if(Ty->typeKind == TypeVoid)
             errorTok(Tok, "variable declared void");
 
@@ -682,12 +719,12 @@ static Node* primary(Token** Rest, Token* Tok) {
         if(equal(Tok->Next, "(")) {//args
             return funcall(Rest, Tok);
         }
-        Obj* Var = findVar(Tok);
-        if(!Var){
+        VarScope* S = findVar(Tok);
+        if(!S || !S->Vars) {
             errorTok(Tok, "undefined varibles");
         }
         *Rest = Tok->Next;
-        return newVarNode(Var, Tok);
+        return newVarNode(S->Vars, Tok);
     }else if(Tok->Kind == TK_NUM) {
         Node* Nd = newNum(Tok->Val, Tok);
         *Rest = Tok->Next;
@@ -775,7 +812,7 @@ static void structMembers(Token** Rest, Token* Tok, Type* Ty){
     Member* Cur = &Head;
 
     while(!equal(Tok, "}")) {
-        Type* BaseTy = declspec(&Tok, Tok);    
+        Type* BaseTy = declspec(&Tok, Tok, NULL);    
         int First = true;
         while(!consume(&Tok, Tok, ";")) {
             if(!First) {
@@ -868,10 +905,29 @@ static Node* structRef(Node* LHS, Token* Tok) {
     return Nd;
 }
 
+static Token* parseTypedef(Token* Tok, Type* BaseTy) {
+    bool First = true;
+    while(!consume(&Tok, Tok, ";")) {
+        if(!First) {
+            Tok = skip(Tok, ",");
+        }
+        First = false;
+        Type* Ty = declarator(&Tok, Tok, BaseTy); 
+        pushScope(genIdent(Ty->Name))->Typedef = Ty;
+    }
+    return Tok;
+
+}
+
 Obj* parse(Token *Tok) {
     Globals = NULL;
     while(Tok->Kind != TK_EOF) {
-        Type* BaseTy = declspec(&Tok, Tok);
+        VarAttr Attr = {};
+        Type* BaseTy = declspec(&Tok, Tok, &Attr);
+        if(Attr.IsTypedef) {
+            Tok = parseTypedef(Tok, BaseTy);
+            continue;
+        }
         if(isFunction(Tok)){
             Tok = function(Tok, BaseTy);
             continue;
