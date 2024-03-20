@@ -149,6 +149,11 @@ Type* declspec(Token** Rest, Token* Tok) {
         return TypeChar;
     }
 
+    if(equal(Tok, "void")) {
+        *Rest = Tok->Next;
+        return TypeVoid;
+    }
+
     if(equal(Tok, "int")) {
         *Rest = Tok->Next;
         return TypeInt;
@@ -297,8 +302,11 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 }
 
 static bool isTypename(Token* Tok) {
-    if(equal(Tok, "int") || equal(Tok, "long") || equal(Tok, "short") || equal(Tok, "char") || equal(Tok, "struct") || equal(Tok, "union"))
-        return true;
+    static char* Kw[] = {"int", "long", "short", "char", "struct", "union", "void"};
+    for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); i++) {
+        if(equal(Tok, Kw[i]))
+            return true;
+    }
     return false;
 }
 
@@ -345,11 +353,11 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 // equality = relational ("==" relational | "!=" relational)*
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // add = mul ("+" mul | "-" mul)*
-//mul = unary ("*" unary | "/" unary)*
-//unary = (+ | - | * | &) unary |  postfix
-//postfix = primary ("[" expr "]" | "." indent | "->" indent)*
+// mul = unary ("*" unary | "/" unary)*
+// unary = (+ | - | * | &) unary |  postfix
+// postfix = primary ("[" expr "]" | "." indent | "->" indent)*
 
-//primary = "(" "{" stmt+  "}" ")"
+// primary = "(" "{" stmt+  "}" ")"
 //          | "(" expr ")" 
 //          | num 
 //          | "sizeof" unary 
@@ -361,8 +369,8 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 // unionDecl = structUnionDecl
 // structUnionDecl = ident? ("{" structMembers)?
 
-//funcall = indent "("(assign (, assign)?)?")"
-//preorder
+// funcall = indent "("(assign (, assign)?)?")"
+// preorder
 
 static Node* compoundStmt(Token** Rest, Token* Tok);
 static Node* declaration(Token** Rest, Token* Tok);
@@ -414,6 +422,9 @@ static Node* declaration(Token** Rest, Token* Tok) {
         }
         
         Type* Ty = declarator(&Tok, Tok, Basety);
+        if(Ty->typeKind == TypeVoid)
+            errorTok(Tok, "variable declared void");
+
         Obj* Var = newLVar(genIdent(Ty->Name), Ty);//regist varibles
 
         if(!equal(Tok, "="))

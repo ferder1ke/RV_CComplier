@@ -5,6 +5,12 @@
  ************************************************************************/
 #include "rvcc.h"
 
+Type* TypeVoid = &(Type){
+    TypeVOID,
+    1, // 2 byte
+    1  // Align
+};
+
 Type* TypeShort = &(Type){
     TypeSHORT,
     2, // 2 byte
@@ -133,6 +139,8 @@ void addType(Node* Nd) {
             if(!Nd->LHS->Ty->Base)
                 errorTok(Nd->Tok, "invalid pointer dereference");
             Nd->Ty = Nd->LHS->Ty->Base;
+            if(Nd->LHS->Ty->Base->typeKind == TypeVOID)
+                errorTok(Nd->Tok, "dereference a void pointer");
             return;
         case ND_FUNCALL:
             Nd->Ty = TypeInt;

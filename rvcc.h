@@ -56,6 +56,7 @@ Token *skip(Token *Tok, char *Str);
 Token *tokenizeFile(char *Path);
 
 typedef enum {
+    TypeVOID,   //void
     TypeINT,    //int
     TypeLONG,   //long
     TypeSHORT,  //short
@@ -131,6 +132,7 @@ typedef enum {
 } NodeKind;
 
 
+extern Type* TypeVoid;
 extern Type* TypeInt;
 extern Type* TypeLong;
 extern Type* TypeChar;
