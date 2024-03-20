@@ -9,6 +9,8 @@
 
 int main() {
   // [62] 修正解析复杂类型声明
+  ASSERT(8, ({ long long x; sizeof(x); }));
+
   ASSERT(1, ({ char x; sizeof(x); }));
   ASSERT(2, ({ short int x; sizeof(x); }));
   ASSERT(2, ({ int short x; sizeof(x); }));

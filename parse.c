@@ -198,6 +198,8 @@ Type* declspec(Token** Rest, Token* Tok) {
                  break;
             case LONG:
             case LONG + INT:
+            case LONG + LONG:
+            case LONG + LONG + INT:
                  Ty = TypeLong;
                  break;
             default:
