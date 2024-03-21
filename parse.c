@@ -386,6 +386,28 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
     return Var;
 }
 
+static Type* abstractDeclarator(Token** Rest, Token* Tok, Type* Ty) {
+    while(equal(Tok, "*")) {
+        Ty = pointerTo(Ty);
+        Tok = Tok->Next;
+    }
+    
+    if(equal(Tok, "(")) {
+        Token* Start = Tok;
+        Type Dummy = {};
+        abstractDeclarator(&Tok, Start->Next, &Dummy); 
+        Tok = skip(Tok, ")");
+        Ty = typeSuffix(Rest, Tok, Ty);
+        return abstractDeclarator(&Tok, Start->Next, Ty);
+    }
+    return typeSuffix(Rest, Tok, Ty);
+}
+
+static Type* typename(Token** Rest, Token* Tok) {
+    Type* Ty = declspec(&Tok, Tok, NULL);
+    return abstractDeclarator(Rest, Tok, Ty);
+}
+
 // program = (typedef | functionDefinition | globalVariable)*
 // functionDefinition = declspec declarator "{" compoundStmt*
 // declspec = ("int" | "long" | "short" | "char" 
@@ -423,6 +445,7 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 // primary = "(" "{" stmt+  "}" ")"
 //          | "(" expr ")" 
 //          | num 
+//          | "sizeof" "(" typename ")" 
 //          | "sizeof" unary 
 //          | ident func-args? 
 //          | str
@@ -431,6 +454,9 @@ static Obj* newStringLiteral(char* Str, Type* Ty) {
 // structDecl = structUnionDecl
 // unionDecl = structUnionDecl
 // structUnionDecl = ident? ("{" structMembers)?
+
+// typename = declspec abstractDeclarator
+// abstractDeclarator = "*"* ("(" abstractDeclarator ")")? typeSuffix 
 
 // funcall = indent "("(assign (, assign)?)?")"
 // preorder
@@ -705,6 +731,7 @@ static Node* postfix(Token** Rest, Token* Tok) {
 }
 
 static Node* primary(Token** Rest, Token* Tok) {
+    Token* Start = Tok;
     if(equal(Tok, "(") && equal(Tok->Next, "{")) {
         Node* Nd = newNode(ND_STMT_EXPR, Tok);
         Nd->Body = compoundStmt(&Tok, Tok->Next->Next)->Body;
@@ -734,6 +761,11 @@ static Node* primary(Token** Rest, Token* Tok) {
         Obj* Var = newStringLiteral(Tok->Str, Tok->Ty);
         *Rest = Tok->Next;
         return newVarNode(Var, Tok);
+    }
+    if(equal(Tok, "sizeof") && equal(Tok->Next, "(") && isTypename(Tok->Next->Next)) {
+        Type* Ty = typename(&Tok, Tok->Next->Next);
+        *Rest = skip(Tok, ")");
+        return newNum(Ty->Size, Start);
     }
     if(equal(Tok, "sizeof")) {
         Node* Nd = unary(Rest, Tok->Next);
