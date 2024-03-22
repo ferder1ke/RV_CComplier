@@ -66,7 +66,8 @@ typedef enum {
     TypeCHAR,   //Char
     TypeSTRUCT, //Struct
     TypeUNION,  //Union
-    TypeBOOL    //bool
+    TypeBOOL,   //bool
+    TypeENUM    //ENUM
 }TypeKind;
 
 struct Type {
@@ -176,9 +177,11 @@ struct Member {
 };
 
 bool isInteger(Type *TY);
+Type* newType(TypeKind Kind, int Size, int Align); 
 
 Type *copyType(Type *Ty);
 void addType(Node* Nd);
+Type* enumType(void);
 Type* funcType(Type* ReturnTy);
 Obj *parse(Token *Tok);
 void codegen(Obj* Prog, FILE*  Out);

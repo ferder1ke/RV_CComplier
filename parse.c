@@ -15,6 +15,7 @@ typedef struct Scope Scope;
 typedef struct VarScope VarScope;
 typedef struct TagScope TagScope;
 
+// struct union enum TagScope
 struct TagScope {
     TagScope* Next;
     char* Name;
@@ -24,6 +25,7 @@ struct TagScope {
 static Node* structRef(Node* LHS, Token* Tok); 
 static Type* structDecl(Token** Rest, Token* Tok); 
 static Type* unionDecl(Token** Rest, Token* Tok);
+static Type* enumSpecifier(Token** Rest, Token* Tok);
 static bool isTypename(Token* Tok);
 
 struct Scope {
@@ -37,6 +39,9 @@ struct VarScope {
     char* Name;
     Obj* Vars;
     Type* Typedef;
+
+    Type* EnumTy;
+    int EnumVal;
 };
 
 typedef struct {
@@ -192,7 +197,7 @@ Type* declspec(Token** Rest, Token* Tok, VarAttr* Attr) {
         //deTypedef
         Type* Ty2 = findTypedef(Tok);
         
-        if(equal(Tok, "struct") || equal(Tok, "union") || Ty2) {
+        if(equal(Tok, "struct") || equal(Tok, "union") || equal(Tok, "enum")|| Ty2) {
             // struct / union / typedef should be aligned left
             if(Counter)
                 break;
@@ -200,6 +205,8 @@ Type* declspec(Token** Rest, Token* Tok, VarAttr* Attr) {
                 Ty = structDecl(&Tok, Tok->Next);
             }else if(equal(Tok, "union")) {
                 Ty = unionDecl(&Tok, Tok->Next);
+            }else if(equal(Tok, "enum")) {
+                Ty = enumSpecifier(&Tok, Tok->Next);
             }else {
                 Ty = Ty2;
                 Tok = Tok->Next;
@@ -390,7 +397,7 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 }
 
 static bool isTypename(Token* Tok) {
-    static char* Kw[] = {"int", "_Bool", "long", "short", "char", "struct", "union", "void", "typedef"};
+    static char* Kw[] = {"int", "_Bool", "long", "short", "char", "struct", "union", "void", "typedef", "enum"};
     for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); i++) {
         if(equal(Tok, Kw[i]))
             return true;
@@ -439,7 +446,11 @@ static Type* typename(Token** Rest, Token* Tok) {
 // functionDefinition = declspec declarator "{" compoundStmt*
 // declspec = ("int" | "long" | "short" | "char" 
 //                            | "typedef"
-//                            | "structDecl" | "unionDecl" | "typedefName")+ 
+//                            | "structDecl" | "unionDecl" | "typedefName" 
+//                            | enumSpecifier)+
+// enumSpecifier = indent ? "{" enumList? "}"
+//               | ident ("{" enumList? "}")?
+// enumList = ident ("=" num)? ("," ident ("=" num)?)*
 // declarator = "*"* ident typeSuffix
 // typeSuffix = ("(" funcParams? ")")?
 // funcParams = param ("," param)*
@@ -505,6 +516,7 @@ static Node* postfix(Token** Rest, Token* Tok);
 static Node* unary(Token** Rest, Token* Tok);
 static Node* funcall(Token** Rest, Token* Tok);
 static Token* parseTypedef(Token* Tok, Type* BaseTy);
+
 
 static Node* compoundStmt(Token** Rest, Token* Tok) {
    Node* Nd = newNode(ND_BLOCK, Tok);
@@ -792,11 +804,17 @@ static Node* primary(Token** Rest, Token* Tok) {
             return funcall(Rest, Tok);
         }
         VarScope* S = findVar(Tok);
-        if(!S || !S->Vars) {
+        if(!S || (!S->Vars && !S->EnumTy)) {
             errorTok(Tok, "undefined varibles");
         }
+        
+        Node* Nd;
+        if(S->Vars)
+            Nd = newVarNode(S->Vars, Tok);
+        else
+            Nd = newNum(S->EnumVal, Tok);
         *Rest = Tok->Next;
-        return newVarNode(S->Vars, Tok);
+        return Nd;
     }else if(Tok->Kind == TK_NUM) {
         Node* Nd = newNum(Tok->Val, Tok);
         *Rest = Tok->Next;
@@ -984,6 +1002,51 @@ static Type* unionDecl(Token** Rest, Token* Tok) { //union declaration
 
     Ty->Size = alignTo(Ty->Size, Ty->Align);
     return Ty;
+}
+
+static Type* enumSpecifier(Token** Rest, Token* Tok) {
+   Type* Ty = enumType();
+
+   Token* Tag = NULL;
+   if(Tok->Kind == TK_IDENT) {
+       Tag = Tok;
+       Tok = Tok->Next;
+   }
+   
+   if(Tag && !equal(Tok, "{")) {
+       Type* Ty = findTag(Tag);
+       if(!Ty)
+           errorTok(Tok, "unknown enum type");
+       if(Ty->typeKind != TypeENUM)
+           errorTok(Tok, "not an enum tag");
+       *Rest = Tok;
+       return Ty;
+   }
+
+   Tok = skip(Tok, "{");
+   int I = 0;   //Index of enum identifier
+   int Val = 0; //val of enum identifier
+
+   while(!equal(Tok, "}")) {
+       if(I++ > 0)
+           Tok = skip(Tok, ",");
+       char* Name = genIdent(Tok);
+       Tok = Tok->Next;
+
+       if(equal(Tok, "=")) {
+           Val = getNumber(Tok->Next);
+           Tok = Tok->Next->Next;
+       }
+
+       VarScope* S = pushScope(Name);
+       S->EnumTy = Ty;
+       S->EnumVal = Val++;
+   }
+   *Rest = Tok->Next;
+
+   if(Tag)
+       pushTagScope(Tag, Ty);
+   return Ty;
 }
 
 static Member* getStructMember(Type* Ty, Token* Tok) {

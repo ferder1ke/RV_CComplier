@@ -41,6 +41,10 @@ Type* TypeChar = &(Type) {
     1  // Align
 };
 
+Type* enumType(void) {
+    return newType(TypeENUM, 4, 4);
+}
+
 static Type* getCommonType(Type* Ty1, Type* Ty2) {
     if(Ty1->Base)
         return pointerTo(Ty1->Base);
@@ -65,7 +69,7 @@ Type* newType(TypeKind Kind, int Size, int Align) {
 
 bool isInteger(Type* TY) {
     TypeKind K = TY->typeKind;
-    return K == TypeINT || K == TypeCHAR || K == TypeLONG || K == TypeSHORT || K == TypeBOOL;
+    return K == TypeINT || K == TypeCHAR || K == TypeLONG || K == TypeSHORT || K == TypeBOOL || K == TypeENUM;
 }
 
 Type* copyType(Type* Ty) {
