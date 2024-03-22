@@ -199,7 +199,23 @@ static char* stringLiteralEnd(char* P) {
     }
     return P;
 }
+static Token* readCharLiteral(char* Start) {
+    char* P = Start + 1;
 
+    if(*P == '\0')
+        errorAt(Start, "unclosed char literal");
+    char C;
+    if(*P == '\\')
+        C = readEscapeChar(&P, P + 1);
+    else
+        C = *P++;
+
+    char* End = strchr(P, '\'');
+
+    Token* Tok = genToken(TK_NUM, Start, End + 1);
+    Tok->Val = C;
+    return Tok;
+}
 
 static Token* readStringLiteral(char* Start) {
     char* End = stringLiteralEnd(Start + 1);
@@ -268,6 +284,14 @@ Token* tokenize(char* Filename, char* P) {
             cur->Len = P - oldPtr;
             continue;
        }
+
+       if(*P == '\'') {
+          cur->Next = readCharLiteral(P);
+          cur = cur->Next;
+          P += cur->Len;
+          continue;
+       }
+
        
        if(isIdent1(*P)) {
            char* dst = P;
