@@ -95,6 +95,56 @@ static void store(Type* Ty) {
         printLn("  sd a0, 0(a1)");
 };
 
+enum {
+    I8,
+    I16,
+    I32,
+    I64
+};
+
+static char i64i8[] = "  # 转换为i8类型\n"
+                      "  slli a0, a0, 56\n"
+                      "  srai a0, a0, 56";
+static char i64i16[] = "  # 转换为i16类型\n"
+                       "  slli a0, a0, 48\n"
+                       "  srai a0, a0, 48";
+static char i64i32[] = "  # 转换为i32类型\n"
+                       "  slli a0, a0, 32\n"
+                       "  srai a0, a0, 32";
+
+static int getTypeId(Type* Ty) {
+    switch(Ty->typeKind) {
+        case TypeCHAR:
+            return I8;
+        case TypeSHORT:
+            return I16;
+        case TypeINT:
+            return I32;
+        default: 
+            return I64;
+    }
+}
+
+static char* castTable[10][10] = {
+    //2i8   2i16    2i32    2i64
+    {NULL,  NULL,   NULL,   NULL}, //i8
+    {i64i8, NULL,   NULL,   NULL}, //i16
+    {i64i8, i64i16, NULL,   NULL}, //i32
+    {i64i8, i64i16, i64i32, NULL}, //i64
+};
+
+static void cast(Type* From, Type* To) {
+    if(To->typeKind == TypeVOID) 
+        return;
+    
+    int T1 = getTypeId(From);
+    int T2 = getTypeId(To);
+
+    if(castTable[T1][T2]) {
+        printLn("%s", castTable[T1][T2]);
+    }
+}
+
 static void storeGeneral(int Reg, int Offset, int Size) {
     printLn("# store Reg %s val to fp %d addr", ArgReg[Reg], Offset);
     switch(Size) {
@@ -200,6 +250,10 @@ static void genExpr(Node *Nd) {
   case ND_DEREF:
     genExpr(Nd->LHS);
     load(Nd->Ty);
+    return;
+  case ND_CAST:
+    genExpr(Nd->LHS);
+    cast(Nd->LHS->Ty, Nd->Ty);
     return;
   case ND_FUNCALL: {
         int NArgs = 0;

@@ -128,7 +128,8 @@ typedef enum {
     ND_DEREF,       // *
     ND_FUNCALL,     // Function calloc
     ND_COMMA,       // ,
-    ND_MEMBER       // Member
+    ND_MEMBER,      // Member
+    ND_CAST
 } NodeKind;
 
 
@@ -149,7 +150,6 @@ struct Node{
     Node* RHS;
     Obj*  Var;
     Node* Body;
-    
 
     char* FuncName;
     Node* Args;

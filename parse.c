@@ -268,6 +268,18 @@ static char* genIdent(Token* Tok) {
     return strndup(Tok->Pos, Tok->Len);
 }
 
+static Node* newCast(Node* Expr, Type* Ty) {
+    addType(Expr);
+
+    Node* Nd = calloc(1, sizeof(Node));
+    Nd->Tok = Expr->Tok;
+    Nd->Kind = ND_CAST;
+    Nd->LHS = Expr;
+    Nd->Ty = copyType(Ty);
+    return Nd;
+}
+
+
 static Node* newAdd(Node* LHS, Node* RHS, Token* Tok) {
     addType(LHS);
     addType(RHS);
@@ -438,8 +450,9 @@ static Type* typename(Token** Rest, Token* Tok) {
 // equality = relational ("==" relational | "!=" relational)*
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // add = mul ("+" mul | "-" mul)*
-// mul = unary ("*" unary | "/" unary)*
-// unary = (+ | - | * | &) unary |  postfix
+// mul = cast ("*" cast | "/" cast)*
+// cast = "(" typename ")" cast | unary
+// unary = (+ | - | * | &) cast |  postfix
 // postfix = primary ("[" expr "]" | "." indent | "->" indent)*
 
 // primary = "(" "{" stmt+  "}" ")"
@@ -471,6 +484,7 @@ static Node* equality(Token** Rest, Token* Tok);
 static Node* relational(Token** Rest, Token* Tok);
 static Node* add(Token** Rest, Token* Tok);
 static Node* mul(Token** Rest, Token* Tok);
+static Node* cast(Token** Rest, Token* Tok);
 static Node* primary(Token** Rest, Token* Tok);
 static Node* postfix(Token** Rest, Token* Tok);
 static Node* unary(Token** Rest, Token* Tok);
@@ -672,13 +686,14 @@ static Node* add(Token** Rest, Token* Tok) {
 }
 
 static Node* mul(Token** Rest, Token* Tok) {
-    Node* Nd = unary(&Tok, Tok);
+    Node* Nd = cast(&Tok, Tok);
     while(1) {
+        Token* Start = Tok;
         if(equal(Tok, "*")) {
-            Nd = newBinary(ND_MUL, Nd, unary(&Tok, Tok->Next), Tok);
+            Nd = newBinary(ND_MUL, Nd, cast(&Tok, Tok->Next), Start);
             continue;
         }else if(equal(Tok, "/")) {
-            Nd = newBinary(ND_DIV, Nd, unary(&Tok, Tok->Next), Tok);
+            Nd = newBinary(ND_DIV, Nd, cast(&Tok, Tok->Next), Start);
             continue;
         }
         *Rest = Tok;
@@ -686,15 +701,28 @@ static Node* mul(Token** Rest, Token* Tok) {
     }
 }
 
+static Node* cast(Token** Rest, Token* Tok) {
+    if(equal(Tok, "(") && isTypename(Tok->Next)) {
+        Token* Start = Tok;
+        Type* Ty = typename(&Tok, Tok->Next);
+        Tok = skip(Tok, ")");
+        Node* Nd = newCast(cast(Rest, Tok), Ty);
+        Nd->Tok = Start;
+        return Nd;
+    }
+
+    return unary(Rest, Tok);
+}
+
 static Node* unary(Token** Rest, Token* Tok) {
     if(equal(Tok, "+")) {
-       return unary(Rest, Tok->Next);    
+       return cast(Rest, Tok->Next);    
     }else if(equal(Tok, "-")) {
-       return newUnary(ND_NEG, unary(Rest, Tok->Next), Tok);
+       return newUnary(ND_NEG, cast(Rest, Tok->Next), Tok);
     }else if(equal(Tok, "&")) {
-       return newUnary(ND_ADDR, unary(Rest, Tok->Next), Tok);
+       return newUnary(ND_ADDR, cast(Rest, Tok->Next), Tok);
     }else if(equal(Tok, "*")) {
-       return newUnary(ND_DEREF, unary(Rest, Tok->Next), Tok);
+       return newUnary(ND_DEREF, cast(Rest, Tok->Next), Tok);
     }
 
     return postfix(Rest, Tok);
