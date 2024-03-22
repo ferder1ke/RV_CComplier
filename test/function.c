@@ -48,6 +48,8 @@ int g1;
 int *g1_ptr() { return &g1; }
 char int_to_char(int x) { return x; }
 
+static int static_fn() { return 3; }
+
 int main() {
    ASSERT(-5, div_long(-10, 2));
   // [25] 支持零参函数定义
@@ -67,7 +69,7 @@ int main() {
   ASSERT(7, add2(3,4));
   ASSERT(1, sub2(4,3));
   ASSERT(55, fib(9));
-
+   ASSERT(3, static_fn());
   ASSERT(1, ({ sub_char(7, 3, 3); }));
 g1 = 3;
 

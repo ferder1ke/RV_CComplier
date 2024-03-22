@@ -46,6 +46,7 @@ struct VarScope {
 
 typedef struct {
     bool IsTypedef;
+    bool IsStatic;
 } VarAttr;
 
 static Scope *Scp = &(Scope) {};
@@ -186,10 +187,18 @@ Type* declspec(Token** Rest, Token* Tok, VarAttr* Attr) {
     Type* Ty = TypeInt;
     
     while(isTypename(Tok)) {
-        if(equal(Tok, "typedef")) {
+        if(equal(Tok, "typedef") || equal(Tok, "static")) {
             if(!Attr)
                 errorTok(Tok, "storage class specifier is not allowed in this context");
-            Attr->IsTypedef = true;
+            if(equal(Tok, "typedef")) {
+                Attr->IsTypedef = true;
+            }
+            if(equal(Tok, "static")) {
+                Attr->IsStatic = true;
+            }
+            if(equal(Tok, "typedef") && equal(Tok, "static")) {
+                errorTok(Tok, "typedef and static may not be used together");
+            }
             Tok = Tok->Next;
             continue;
         }
@@ -397,7 +406,7 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 }
 
 static bool isTypename(Token* Tok) {
-    static char* Kw[] = {"int", "_Bool", "long", "short", "char", "struct", "union", "void", "typedef", "enum"};
+    static char* Kw[] = {"int", "_Bool", "long", "short", "char", "struct", "union", "void", "typedef", "enum", "static"};
     for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); i++) {
         if(equal(Tok, Kw[i]))
             return true;
@@ -445,7 +454,7 @@ static Type* typename(Token** Rest, Token* Tok) {
 // program = (typedef | functionDefinition | globalVariable)*
 // functionDefinition = declspec declarator "{" compoundStmt*
 // declspec = ("int" | "long" | "short" | "char" 
-//                            | "typedef"
+//                            | "typedef" | "static"
 //                            | "structDecl" | "unionDecl" | "typedefName" 
 //                            | enumSpecifier)+
 // enumSpecifier = indent ? "{" enumList? "}"
@@ -881,13 +890,14 @@ static Node* funcall(Token** Rest, Token* Tok) {
     return Nd;
 }
 
-static Token* function(Token* Tok, Type* BaseTy) {
+static Token* function(Token* Tok, Type* BaseTy, VarAttr* Attr) {
     Type* Ty = declarator(&Tok, Tok, BaseTy);
 
     Obj* Fn = newGVar(genIdent(Ty->Name), Ty);
     Fn->IsFunction = true;
 
     Fn->IsDefinition = !consume(&Tok, Tok, ";");
+    Fn->IsStatic = Attr->IsStatic;
     if(!Fn->IsDefinition)
         return Tok;
 
@@ -1092,7 +1102,7 @@ Obj* parse(Token *Tok) {
             continue;
         }
         if(isFunction(Tok)){
-            Tok = function(Tok, BaseTy);
+            Tok = function(Tok, BaseTy, &Attr);
             continue;
         }
         Tok = globalVariable(Tok, BaseTy);    

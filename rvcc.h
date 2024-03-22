@@ -98,6 +98,8 @@ struct Obj {
   //Function
   bool IsFunction;
   bool IsDefinition;
+  bool IsStatic;
+ 
   Obj* Param;
 
   char* InitData;

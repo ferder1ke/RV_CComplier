@@ -491,9 +491,13 @@ void emitText(Obj *Prog) {
   for (Obj *Fn = Prog; Fn; Fn = Fn->Next) {
     if(!Fn->IsFunction || !Fn->IsDefinition)
         continue;
-      printLn("\n  # 定义全局%s段", Fn->Name);
-      printLn("  .globl %s", Fn->Name);
-      
+      if(Fn->IsStatic) {
+          printLn("\n  # 定义局部%s函数", Fn->Name);
+          printLn("  .local %s", Fn->Name);
+      } else {
+          printLn("\n  # 定义全局%s函数", Fn->Name);
+          printLn("  .globl %s", Fn->Name);
+      }
       printLn("  .text");
       printLn("# =====%s段开始===============", Fn->Name);
       printLn("# %s段标签", Fn->Name);
