@@ -37,6 +37,12 @@ int fib(int x) {
   return fib(x-1) + fib(x-2);
 }
 
+// [70] 处理返回类型转换
+int g1;
+
+int *g1_ptr() { return &g1; }
+char int_to_char(int x) { return x; }
+
 int main() {
   // [25] 支持零参函数定义
   ASSERT(3, ret3());
@@ -52,7 +58,10 @@ int main() {
   ASSERT(55, fib(9));
 
   ASSERT(1, ({ sub_char(7, 3, 3); }));
+g1 = 3;
 
+  ASSERT(3, *g1_ptr());
+  ASSERT(5, int_to_char(261));
   printf("OK\n");
   return 0;
 }

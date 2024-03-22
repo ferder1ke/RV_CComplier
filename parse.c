@@ -9,6 +9,8 @@
 Obj* Locals;
 Obj* Globals;
 
+static Obj* CurrentFunc;
+
 typedef struct Scope Scope;
 typedef struct VarScope VarScope;
 typedef struct TagScope TagScope;
@@ -560,8 +562,10 @@ static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy) {
 static Node* stmt(Token** Rest, Token* Tok){
     if(equal(Tok, "return")) {
         Node* Nd = newNode(ND_RETURN, Tok);
-        Nd->LHS = expr(&Tok, Tok->Next);
+        Node* Exp = expr(&Tok, Tok->Next);
         *Rest = skip(Tok, ";");
+        addType(Exp);
+        Nd->LHS = newCast(Exp, CurrentFunc->Ty->ReturnTy);
         return Nd;
     }
 
@@ -849,6 +853,7 @@ static Token* function(Token* Tok, Type* BaseTy) {
     if(!Fn->IsDefinition)
         return Tok;
 
+    CurrentFunc = Fn;
     Locals = NULL;
     enterScope(); 
     createParamLVars(Ty->Param);
