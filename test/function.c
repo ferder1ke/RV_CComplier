@@ -37,6 +37,10 @@ int fib(int x) {
   return fib(x-1) + fib(x-2);
 }
 
+int div_long(long a, long b) {
+  return a / b;
+}
+
 // [70] 处理返回类型转换
 int g1;
 
@@ -44,6 +48,7 @@ int *g1_ptr() { return &g1; }
 char int_to_char(int x) { return x; }
 
 int main() {
+   ASSERT(-5, div_long(-10, 2));
   // [25] 支持零参函数定义
   ASSERT(3, ret3());
   // [26] 支持最多6个参数的函数定义

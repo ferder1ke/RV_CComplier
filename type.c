@@ -171,7 +171,7 @@ void addType(Node* Nd) {
                 errorTok(Nd->Tok, "dereference a void pointer");
             return;
         case ND_FUNCALL:
-            Nd->Ty = TypeInt;
+            Nd->Ty = Nd->FuncType->ReturnTy;
             return;
         case ND_STMT_EXPR:
             if(Nd->Body) {

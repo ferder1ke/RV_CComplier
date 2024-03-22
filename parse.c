@@ -825,19 +825,33 @@ static Node* funcall(Token** Rest, Token* Tok) {
         errorTok(Start, "implicite declaration of a function");
     if(!S->Vars || S->Vars->Ty->typeKind != TypeFunc)
         errorTok(Start, "not a function");
-    Type* Ty = S->Vars->Ty->ReturnTy;
+    
+    Type* Ty = S->Vars->Ty;
+    Type* ParamTy = Ty->Param;
+
     Tok = Tok->Next->Next;
     while(!equal(Tok, ")")) {
         if(Cur != &Head) {
             Tok = skip(Tok, ",");
         }
-        Cur->Next = assign(&Tok, Tok);
+        Node* Args = assign(&Tok, Tok);
+        addType(Args);
+        if(ParamTy) {
+            if(ParamTy->typeKind == TypeSTRUCT || ParamTy->typeKind == TypeUNION) {
+                errorTok(Args->Tok, "not support Struct and Union args yet");
+            }
+            Args = newCast(Args, ParamTy);
+            ParamTy = ParamTy->Next;
+        }
+
+        Cur->Next = Args;
         Cur = Cur->Next;
         addType(Cur);//for type cast align
     }
     Node* Nd = newNode(ND_FUNCALL, Start);
     Nd->FuncName = strndup(Start->Pos, Start->Len);
-    Nd->Ty = Ty;
+    Nd->FuncType = Ty;
+    Nd->Ty = Ty->ReturnTy;
     Nd->Args = Head.Next;
     *Rest = skip(Tok, ")");
     return Nd;

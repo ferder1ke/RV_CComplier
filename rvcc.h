@@ -152,6 +152,7 @@ struct Node{
     Node* Body;
 
     char* FuncName;
+    Type* FuncType;
     Node* Args;
     
     Member* Mem;
