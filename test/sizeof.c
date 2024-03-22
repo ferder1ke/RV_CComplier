@@ -10,6 +10,16 @@
 
 int main() {
   // [65] 支持对类型进行sizeof
+  ASSERT(8, sizeof(-10 + (long)5));
+  ASSERT(8, sizeof(-10 - (long)5));
+  ASSERT(8, sizeof(-10 * (long)5));
+  ASSERT(8, sizeof(-10 / (long)5));
+  ASSERT(8, sizeof((long)-10 + 5));
+  ASSERT(8, sizeof((long)-10 - 5));
+  ASSERT(8, sizeof((long)-10 * 5));
+  ASSERT(8, sizeof((long)-10 / 5));
+
+
   ASSERT(1, sizeof(char));
   ASSERT(2, sizeof(short));
   ASSERT(2, sizeof(short int));

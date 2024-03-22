@@ -35,6 +35,20 @@ Type* TypeChar = &(Type) {
     1  // Align
 };
 
+static Type* getCommonType(Type* Ty1, Type* Ty2) {
+    if(Ty1->Base)
+        return pointerTo(Ty1->Base);
+    if(Ty1->Size == 8 || Ty2->Size == 8)
+        return TypeLong;
+    return TypeInt;
+}
+
+static void usualArithConv(Node** LHS, Node** RHS) {
+    Type* Ty = getCommonType((*LHS)->Ty, (*RHS)->Ty);
+    *LHS = newCast(*LHS, Ty);
+    *RHS = newCast(*RHS, Ty);
+}
+
 Type* newType(TypeKind Kind, int Size, int Align) {
     Type* Ty = calloc(1, sizeof(Type));
     Ty->typeKind = Kind;
@@ -97,24 +111,38 @@ void addType(Node* Nd) {
     }
 
     switch(Nd->Kind) {
+        case ND_NUM:
+            Nd->Ty = (Nd->Val == (int)Nd->Val) ? TypeInt : TypeLong;
+            return;
         case ND_ADD:
         case ND_SUB:
         case ND_MUL:
         case ND_DIV:
-        case ND_NEG:
+            usualArithConv(&Nd->LHS, &Nd->RHS);
             Nd->Ty = Nd->LHS->Ty;
             return;
+        case ND_NEG: {
+            Type* Ty = getCommonType(TypeInt, Nd->LHS->Ty);
+            Nd->LHS = newCast(Nd->LHS, Ty);
+            Nd->Ty = Ty;
+            return;
+        }
         case ND_ASSIGN:
             if(Nd->LHS->Ty->typeKind == TypeARRAY)
                 errorTok(Nd->LHS->Tok, "not an lvalue");
+            if(Nd->LHS->Ty->typeKind != TypeSTRUCT) {
+                Nd->RHS = newCast(Nd->RHS, Nd->LHS->Ty);
+            }
             Nd->Ty = Nd->LHS->Ty;
             return;
+       
+        //logical statement
         case ND_EQ:
         case ND_NE:
         case ND_LT:
         case ND_LE:
-        case ND_NUM:
-            Nd->Ty = TypeLong;
+            usualArithConv(&Nd->LHS, &Nd->RHS);
+            Nd->Ty = TypeInt;
             return;
 
         case ND_VAR:

@@ -183,3 +183,4 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty);
 Type* arrayof(Type* Base, int Size);
 static void genStmt(Node *Nd); 
 char *format(char *Fmt, ...);
+Node* newCast(Node* Expr, Type* Ty);
