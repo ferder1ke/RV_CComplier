@@ -815,7 +815,13 @@ static Node* funcall(Token** Rest, Token* Tok) {
     Token* Start = Tok;
     Node Head = {};
     Node* Cur = &Head;
-
+    
+    VarScope* S = findVar(Start);
+    if(!S)
+        errorTok(Start, "implicite declaration of a function");
+    if(!S->Vars || S->Vars->Ty->typeKind != TypeFunc)
+        errorTok(Start, "not a function");
+    Type* Ty = S->Vars->Ty->ReturnTy;
     Tok = Tok->Next->Next;
     while(!equal(Tok, ")")) {
         if(Cur != &Head) {
@@ -823,9 +829,11 @@ static Node* funcall(Token** Rest, Token* Tok) {
         }
         Cur->Next = assign(&Tok, Tok);
         Cur = Cur->Next;
+        addType(Cur);//for type cast align
     }
     Node* Nd = newNode(ND_FUNCALL, Start);
     Nd->FuncName = strndup(Start->Pos, Start->Len);
+    Nd->Ty = Ty;
     Nd->Args = Head.Next;
     *Rest = skip(Tok, ")");
     return Nd;
