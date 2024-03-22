@@ -40,7 +40,8 @@ int fib(int x) {
 int div_long(long a, long b) {
   return a / b;
 }
-
+_Bool bool_fn_add(_Bool x) { return x + 1; }
+_Bool bool_fn_sub(_Bool x) { return x - 1; }
 // [70] 处理返回类型转换
 int g1;
 
@@ -57,7 +58,12 @@ int main() {
   ASSERT(21, add6(1,2,3,4,5,6));
   ASSERT(66, add6(1,2,add6(3,4,5,6,7,8),9,10,11));
   ASSERT(136, add6(1,2,add6(3,add6(4,5,6,7,8,9),10,11,12,13),14,15,16));
-
+  ASSERT(1, bool_fn_add(3));
+  ASSERT(0, bool_fn_sub(3));
+  ASSERT(1, bool_fn_add(-3));
+  ASSERT(0, bool_fn_sub(-3));
+  ASSERT(1, bool_fn_add(0));
+  ASSERT(1, bool_fn_sub(0));
   ASSERT(7, add2(3,4));
   ASSERT(1, sub2(4,3));
   ASSERT(55, fib(9));

@@ -169,11 +169,12 @@ static Type* findTypedef(Token* Tok) {
 Type* declspec(Token** Rest, Token* Tok, VarAttr* Attr) {
     enum {
         VOID = 1 << 0,
-        CHAR = 1 << 2,
-        SHORT = 1 << 4,
-        INT = 1 << 6,
-        LONG = 1 << 8,
-        OTHER = 1 << 10,
+        BOOL = 1 << 2,
+        CHAR = 1 << 4,
+        SHORT = 1 << 6,
+        INT = 1 << 8,
+        LONG = 1 << 10,
+        OTHER = 1 << 12,
     };
 
     int Counter = 0;
@@ -212,6 +213,8 @@ Type* declspec(Token** Rest, Token* Tok, VarAttr* Attr) {
             Counter += CHAR;
         }else if(equal(Tok, "void")) {
             Counter += VOID;
+        }else if(equal(Tok, "_Bool")) {
+            Counter += BOOL;
         }else if(equal(Tok, "int")) {
             Counter += INT;
         }else if(equal(Tok, "long")) {
@@ -225,6 +228,9 @@ Type* declspec(Token** Rest, Token* Tok, VarAttr* Attr) {
         switch(Counter) {
             case VOID:
                  Ty = TypeVoid;
+                 break;
+            case BOOL:
+                 Ty = TypeBool;
                  break;
             case INT:
                  Ty = TypeInt;
@@ -384,7 +390,7 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 }
 
 static bool isTypename(Token* Tok) {
-    static char* Kw[] = {"int", "long", "short", "char", "struct", "union", "void", "typedef"};
+    static char* Kw[] = {"int", "_Bool", "long", "short", "char", "struct", "union", "void", "typedef"};
     for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); i++) {
         if(equal(Tok, Kw[i]))
             return true;

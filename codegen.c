@@ -136,7 +136,12 @@ static char* castTable[10][10] = {
 static void cast(Type* From, Type* To) {
     if(To->typeKind == TypeVOID) 
         return;
-    
+    if(To->typeKind == TypeBOOL) {
+        printLn("  # 转为bool类型：为0置0，非0置1");
+        printLn("  snez a0, a0");
+        return;
+    }
+
     int T1 = getTypeId(From);
     int T2 = getTypeId(To);
 

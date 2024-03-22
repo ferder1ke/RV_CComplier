@@ -29,6 +29,12 @@ Type* TypeLong = &(Type){
     8  // Align
 };
 
+Type* TypeBool = &(Type) {
+    TypeBOOL,
+    1, // 1 byte
+    1  // Align
+};
+
 Type* TypeChar = &(Type) {
     TypeCHAR,
     1, // 1 byte
@@ -59,7 +65,7 @@ Type* newType(TypeKind Kind, int Size, int Align) {
 
 bool isInteger(Type* TY) {
     TypeKind K = TY->typeKind;
-    return K == TypeINT || K == TypeCHAR || K == TypeLONG || K == TypeSHORT;
+    return K == TypeINT || K == TypeCHAR || K == TypeLONG || K == TypeSHORT || K == TypeBOOL;
 }
 
 Type* copyType(Type* Ty) {

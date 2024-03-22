@@ -65,7 +65,8 @@ typedef enum {
     TypeARRAY,  //Arrary
     TypeCHAR,   //Char
     TypeSTRUCT, //Struct
-    TypeUNION   //Union
+    TypeUNION,  //Union
+    TypeBOOL    //bool
 }TypeKind;
 
 struct Type {
@@ -134,6 +135,7 @@ typedef enum {
 
 
 extern Type* TypeVoid;
+extern Type* TypeBool;
 extern Type* TypeInt;
 extern Type* TypeLong;
 extern Type* TypeChar;
