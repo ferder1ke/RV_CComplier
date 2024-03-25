@@ -488,7 +488,7 @@ static Type* typename(Token** Rest, Token* Tok) {
 // add = mul ("+" mul | "-" mul)*
 // mul = cast ("*" cast | "/" cast)*
 // cast = "(" typename ")" cast | unary
-// unary = (+ | - | * | & | "!") cast |  postfix
+// unary = ( "+" | "-" | "*" | "&" | "!" | "~") cast |  postfix
 // postfix = primary ("[" expr "]" | "." indent | "->" indent)* || "++" || "--"
 
 // primary = "(" "{" stmt+  "}" ")"
@@ -815,6 +815,9 @@ static Node* unary(Token** Rest, Token* Tok) {
 
     if(equal(Tok, "--"))
        return toAssign(newSub(unary(Rest, Tok->Next), newNum(1, Tok), Tok));
+    
+    if(equal(Tok, "~"))
+       return newUnary(ND_BITNOT, cast(Rest, Tok->Next), Tok);
     
     if(equal(Tok, "!"))
        return newUnary(ND_NOT, cast(Rest, Tok->Next), Tok);

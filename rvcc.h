@@ -135,6 +135,7 @@ typedef enum {
     ND_COMMA,       // ,
     ND_MEMBER,      // Member
     ND_NOT,         // ! 
+    ND_BITNOT,      // ~ 
     ND_CAST
 } NodeKind;
 

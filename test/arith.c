@@ -1,7 +1,10 @@
 #include "test.h"
 
 int main() {
-   ASSERT(0, !1);
+  ASSERT(-1, ~0);
+  ASSERT(0, ~-1);
+
+  ASSERT(0, !1);
   ASSERT(0, !2);
   ASSERT(1, !0);
   ASSERT(1, !(char)0);

@@ -264,6 +264,12 @@ static void genExpr(Node *Nd) {
     genExpr(Nd->LHS);
     printLn("  seqz a0, a0"); 
     return;
+  case ND_BITNOT:
+    genExpr(Nd->LHS);
+    printLn("  # 按位取反");
+    // 这里的 not a0, a0 为 xori a0, a0, -1 的伪码
+    printLn("  not a0, a0");
+    return;
   case ND_FUNCALL: {
         int NArgs = 0;
         for(Node* Arg = Nd->Args; Arg; Arg = Arg->Next) {

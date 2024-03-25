@@ -183,6 +183,9 @@ void addType(Node* Nd) {
         case ND_NOT:
             Nd->Ty = TypeInt;
             return;
+        case ND_BITNOT:
+            Nd->Ty = Nd->LHS->Ty;
+            return;
         case ND_FUNCALL:
             Nd->Ty = Nd->FuncType->ReturnTy;
             return;
