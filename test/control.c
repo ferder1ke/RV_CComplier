@@ -5,8 +5,18 @@
  */
 
 int main() {
+  
+  ASSERT(1, 0||1);
+  ASSERT(1, 0||(2-2)||5);
+  ASSERT(0, 0||0);
+  ASSERT(0, 0||(2-2));
+
+  ASSERT(0, 0&&1);
+  ASSERT(0, (2-2)&&5);
+  ASSERT(1, 1&&5);
+
   // [15] 支持if语句
-ASSERT(55, ({ int j=0; for (int i=0; i<=10; i=i+1) j=j+i; j; }));
+  ASSERT(55, ({ int j=0; for (int i=0; i<=10; i=i+1) j=j+i; j; }));
   ASSERT(3, ({ int i=3; int j=0; for (int i=0; i<=10; i=i+1) j=j+i; i; }));
 
 

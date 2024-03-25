@@ -264,6 +264,42 @@ static void genExpr(Node *Nd) {
     genExpr(Nd->LHS);
     printLn("  seqz a0, a0"); 
     return;
+  // 逻辑与
+  case ND_LOGAND: {
+    int C = count();
+    printLn("\n# =====逻辑与%d===============", C);
+    genExpr(Nd->LHS);
+    // 判断是否为短路操作
+    printLn("  # 左部短路操作判断，为0则跳转");
+    printLn("  beqz a0, .L.false.%d", C);
+    genExpr(Nd->RHS);
+    printLn("  # 右部判断，为0则跳转");
+    printLn("  beqz a0, .L.false.%d", C);
+    printLn("  li a0, 1");
+    printLn("  j .L.end.%d", C);
+    printLn(".L.false.%d:", C);
+    printLn("  li a0, 0");
+    printLn(".L.end.%d:", C);
+    return;
+  }
+  // 逻辑或
+  case ND_LOGOR: {
+    int C = count();
+    printLn("\n# =====逻辑或%d===============", C);
+    genExpr(Nd->LHS);
+    // 判断是否为短路操作
+    printLn("  # 左部短路操作判断，不为0则跳转");
+    printLn("  bnez a0, .L.true.%d", C);
+    genExpr(Nd->RHS);
+    printLn("  # 右部判断，不为0则跳转");
+    printLn("  bnez a0, .L.true.%d", C);
+    printLn("  li a0, 0");
+    printLn("  j .L.end.%d", C);
+    printLn(".L.true.%d:", C);
+    printLn("  li a0, 1");
+    printLn(".L.end.%d:", C);
+    return;
+  }
   case ND_BITNOT:
     genExpr(Nd->LHS);
     printLn("  # 按位取反");
@@ -335,6 +371,8 @@ static void genExpr(Node *Nd) {
     printLn("  # a0^a1，结果写入a0");
     printLn("  xor a0, a0, a1");
     return;
+
+
   case ND_EQ:
   case ND_NE:
     // a0=a0^a1，异或指令

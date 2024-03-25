@@ -78,8 +78,10 @@ typedef struct {
 // exprStmt = expr? ";"
 
 // expr = assign (',' expr)?
-// assign = bitOr (assignOp assign)?
-// bitOr = bitXor ("|" bitXor)?
+// assign = logOr (assignOp assign)?
+// logOr = logAnd ("||" logAnd)*
+// logAnd = bitOr ("&&" bitOr)*
+// bitOr = bitXor ("|" bitXor)*
 // bitXor = bitAnd ("^" bitAnd)*
 // bitAnd = equality ("&" equality)*
 // assignOp = "=" | "+=" | "*=" | "-=" | "/=" | "%=" | "^=" | "|=" | "&="
@@ -128,6 +130,8 @@ static Node* unary(Token** Rest, Token* Tok);
 static Node* funcall(Token** Rest, Token* Tok);
 static Token* parseTypedef(Token* Tok, Type* BaseTy);
 
+static Node* logOr(Token** Rest, Token* Tok); 
+static Node* logAnd(Token** Rest, Token* Tok); 
 static Node* bitOr(Token** Rest, Token* Tok); 
 static Node* bitXor(Token** Rest, Token* Tok); 
 static Node* bitAnd(Token** Rest, Token* Tok); 
@@ -534,6 +538,28 @@ static Type* typename(Token** Rest, Token* Tok) {
     return abstractDeclarator(Rest, Tok, Ty);
 }
 
+static Node* logOr(Token** Rest, Token* Tok) {
+    Node* Nd = logAnd(&Tok, Tok);
+
+    while(equal(Tok, "||")) {
+        Token* Start = Tok;
+        Nd = newBinary(ND_LOGOR, Nd, logAnd(&Tok, Tok->Next), Start);
+    }
+    *Rest = Tok;
+    return Nd;
+}
+
+static Node* logAnd(Token** Rest, Token* Tok) {
+    Node* Nd = bitOr(&Tok, Tok);
+
+    while(equal(Tok, "&&")) {
+        Token* Start = Tok;
+        Nd = newBinary(ND_LOGAND, Nd, bitOr(&Tok, Tok->Next), Start);
+    }
+    *Rest = Tok;
+    return Nd;
+}
+
 static Node* bitOr(Token** Rest, Token* Tok) {
     Node* Nd = bitXor(&Tok, Tok);
 
@@ -733,7 +759,7 @@ static Node* toAssign(Node* Binary) {
 }
 
 static Node* assign(Token** Rest, Token* Tok) {
-    Node* Nd = bitOr(&Tok, Tok);
+    Node* Nd = logOr(&Tok, Tok);
     
     if(equal(Tok, "=")) {
         Nd = newBinary(ND_ASSIGN, Nd, assign(&Tok, Tok->Next), Tok);    

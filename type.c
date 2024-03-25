@@ -185,6 +185,8 @@ void addType(Node* Nd) {
                 errorTok(Nd->Tok, "dereference a void pointer");
             return;
         case ND_NOT:
+        case ND_LOGOR:
+        case ND_LOGAND:
             Nd->Ty = TypeInt;
             return;
         case ND_BITNOT:

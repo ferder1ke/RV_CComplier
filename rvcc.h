@@ -126,6 +126,9 @@ typedef enum {
     ND_BITAND,      // & bit and
     ND_BITOR,       // | bit and
     ND_BITXOR,      // ^ bit and
+    
+    ND_LOGOR,       // | logical or
+    ND_LOGAND,      // & logical and
 
     ND_STMT_EXPR,
     ND_ASSIGN,      // assign
