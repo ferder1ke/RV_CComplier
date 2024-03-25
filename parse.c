@@ -480,7 +480,8 @@ static Type* typename(Token** Rest, Token* Tok) {
 // exprStmt = expr? ";"
 
 // expr = assign (',' expr)?
-// assign = equality ("=" assign)?
+// assign = equality (assignOp assign)?
+// assignOp = "=" | "+=" | "*=" | "-=" | "/="
 
 // equality = relational ("==" relational | "!=" relational)*
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
@@ -672,10 +673,44 @@ static Node* expr(Token** Rest, Token* Tok) {
     return Nd;
 }
 
+static Node* toAssign(Node* Binary) {
+    addType(Binary->LHS);
+    addType(Binary->RHS);
+    
+    Token* Tok = Binary->Tok;
+    Obj* Tmp = newLVar("", pointerTo(Binary->LHS->Ty));
+
+    Node* Expr1 = newBinary(ND_ASSIGN, newVarNode(Tmp, Tok), 
+                                       newUnary(ND_ADDR, Binary->LHS, Tok), Tok);
+
+    Node* Expr2 = newBinary(ND_ASSIGN, newUnary(ND_DEREF, newVarNode(Tmp, Tok), Tok),
+                                       newBinary(Binary->Kind, newUnary(ND_DEREF, newVarNode(Tmp, Tok), Tok), 
+                                                               Binary->RHS, Tok), Tok);
+
+    return newBinary(ND_COMMA, Expr1, Expr2, Tok);
+}
+
 static Node* assign(Token** Rest, Token* Tok) {
     Node* Nd = equality(&Tok, Tok);
+    
     if(equal(Tok, "=")) {
         Nd = newBinary(ND_ASSIGN, Nd, assign(&Tok, Tok->Next), Tok);    
+    }
+
+    if(equal(Tok, "+=")) {
+        return toAssign(newAdd(Nd, assign(Rest, Tok->Next), Tok));    
+    }
+    
+    if(equal(Tok, "-=")) {
+        return toAssign(newSub(Nd, assign(Rest, Tok->Next), Tok));    
+    }
+
+    if(equal(Tok, "*=")) {
+        return toAssign(newBinary(ND_MUL, Nd, assign(Rest, Tok->Next), Tok));    
+    }
+
+    if(equal(Tok, "/=")) {
+        return toAssign(newBinary(ND_DIV, Nd, assign(Rest, Tok->Next), Tok));    
     }
     *Rest = Tok;
     return Nd;

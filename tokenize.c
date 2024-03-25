@@ -72,7 +72,7 @@ static bool startWith(char* str, char* subStr) {
 }
 
 static int readPunct(char* P) {
-    static char* Kw[] = {"==", "!=", ">=", "<=" ,"->"};
+    static char* Kw[] = {"==", "!=", ">=", "<=" ,"->", "+=", "-=", "*=", "/="};
     for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); ++i) {
         if(startWith(P, Kw[i]))
             return strlen(Kw[i]);
@@ -81,7 +81,9 @@ static int readPunct(char* P) {
 }
 
 static bool isKeyWord(Token* Tok) {
-    static char* Kw[] = {"return", "if", "else", "for" ,"while", "int", "long", "short", "sizeof", "char", "struct", "union", "void", "typedef", "_Bool", "enum", "static"};
+    static char* Kw[] = {"return", "if", "else", "for" ,"while", "int", "long", "short",
+                         "sizeof", "char", "struct", "union", "void", "typedef", "_Bool", 
+                         "enum", "static"};
     for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); i++) {
         if(equal(Tok, Kw[i]))
             return true;
