@@ -2,7 +2,11 @@
 
 int main() {
 
- ASSERT(7, ({ int i=2; i+=5; i; }));
+   ASSERT(3, ({ int i=2; ++i; }));
+  ASSERT(2, ({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; ++*p; }));
+  ASSERT(0, ({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; --*p; }));
+
+  ASSERT(7, ({ int i=2; i+=5; i; }));
   ASSERT(7, ({ int i=2; i+=5; }));
   ASSERT(3, ({ int i=5; i-=2; i; }));
   ASSERT(3, ({ int i=5; i-=2; }));

@@ -807,6 +807,12 @@ static Node* unary(Token** Rest, Token* Tok) {
        return newUnary(ND_DEREF, cast(Rest, Tok->Next), Tok);
     }
 
+    if(equal(Tok, "++"))
+       return toAssign(newAdd(unary(Rest, Tok->Next), newNum(1, Tok), Tok));
+
+    if(equal(Tok, "--"))
+       return toAssign(newSub(unary(Rest, Tok->Next), newNum(1, Tok), Tok));
+
     return postfix(Rest, Tok);
 }
 
