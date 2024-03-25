@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <stdint.h>
+#include <strings.h>
 
 static char *ArgReg[] = {"a0", "a1", "a2", "a3", "a4", "a5"};
 

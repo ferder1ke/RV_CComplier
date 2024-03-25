@@ -238,6 +238,30 @@ static Token* readStringLiteral(char* Start) {
     return Tok;
 }
 
+static Token* readIntLiteral(char* Start) {
+    char* P = Start;
+    int Base = 10;
+
+    if(!strncasecmp(P, "0x", 2) && isxdigit(P[2])) {
+        P += 2;
+        Base = 16;
+    }else if(!strncasecmp(P, "0b", 2) && (P[2] == '1' || P[2] == '0')) {
+        P += 2;
+        Base = 2;
+    }else if (*P == '0'){
+        Base = 8;
+    }
+
+    long Val = strtoul(P, &P, Base);
+    if(isalnum(*P))
+        errorAt(P, "invalid digit");
+    
+    Token* Tok = genToken(TK_NUM, Start, P);
+    Tok->Val = Val;
+    
+    return Tok;
+}
+
 void addLineNumber(Token* Tok) {
     char* P = currentInput;
     int N = 1;
@@ -280,11 +304,9 @@ Token* tokenize(char* Filename, char* P) {
       
 
        if(isdigit(*P)) {
-            cur->Next = genToken(TK_NUM, P, P);
+            cur->Next = readIntLiteral(P);
             cur = cur->Next;
-            const char* oldPtr = P;
-            cur->Val = strtol(P, &P, 10);
-            cur->Len = P - oldPtr;
+            P += cur->Len;
             continue;
        }
 
