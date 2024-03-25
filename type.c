@@ -128,6 +128,7 @@ void addType(Node* Nd) {
         case ND_SUB:
         case ND_MUL:
         case ND_DIV:
+        case ND_MOD:
             usualArithConv(&Nd->LHS, &Nd->RHS);
             Nd->Ty = Nd->LHS->Ty;
             return;

@@ -481,12 +481,12 @@ static Type* typename(Token** Rest, Token* Tok) {
 
 // expr = assign (',' expr)?
 // assign = equality (assignOp assign)?
-// assignOp = "=" | "+=" | "*=" | "-=" | "/="
+// assignOp = "=" | "+=" | "*=" | "-=" | "/=" | "%="
 
 // equality = relational ("==" relational | "!=" relational)*
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // add = mul ("+" mul | "-" mul)*
-// mul = cast ("*" cast | "/" cast)*
+// mul = cast ("*" cast | "/" cast | "%" cast)*
 // cast = "(" typename ")" cast | unary
 // unary = ( "+" | "-" | "*" | "&" | "!" | "~") cast |  postfix
 // postfix = primary ("[" expr "]" | "." indent | "->" indent)* || "++" || "--"
@@ -715,6 +715,10 @@ static Node* assign(Token** Rest, Token* Tok) {
     if(equal(Tok, "/=")) {
         return toAssign(newBinary(ND_DIV, Nd, assign(Rest, Tok->Next), Tok));    
     }
+    
+    if(equal(Tok, "%=")) {
+        return toAssign(newBinary(ND_MOD, Nd, assign(Rest, Tok->Next), Tok));   
+    }
     *Rest = Tok;
     return Nd;
 }
@@ -779,6 +783,9 @@ static Node* mul(Token** Rest, Token* Tok) {
             continue;
         }else if(equal(Tok, "/")) {
             Nd = newBinary(ND_DIV, Nd, cast(&Tok, Tok->Next), Start);
+            continue;
+        }else if(equal(Tok, "%")) {
+            Nd = newBinary(ND_MOD, Nd, cast(&Tok, Tok->Next), Start);
             continue;
         }
         *Rest = Tok;
