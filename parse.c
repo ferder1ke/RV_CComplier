@@ -489,7 +489,7 @@ static Type* typename(Token** Rest, Token* Tok) {
 // mul = cast ("*" cast | "/" cast)*
 // cast = "(" typename ")" cast | unary
 // unary = (+ | - | * | &) cast |  postfix
-// postfix = primary ("[" expr "]" | "." indent | "->" indent)*
+// postfix = primary ("[" expr "]" | "." indent | "->" indent)* || "++" || "--"
 
 // primary = "(" "{" stmt+  "}" ")"
 //          | "(" expr ")" 
@@ -673,6 +673,8 @@ static Node* expr(Token** Rest, Token* Tok) {
     return Nd;
 }
 
+//Tmp = &A
+//*Tmp = *Tmp + B
 static Node* toAssign(Node* Binary) {
     addType(Binary->LHS);
     addType(Binary->RHS);
@@ -684,7 +686,8 @@ static Node* toAssign(Node* Binary) {
                                        newUnary(ND_ADDR, Binary->LHS, Tok), Tok);
 
     Node* Expr2 = newBinary(ND_ASSIGN, newUnary(ND_DEREF, newVarNode(Tmp, Tok), Tok),
-                                       newBinary(Binary->Kind, newUnary(ND_DEREF, newVarNode(Tmp, Tok), Tok), 
+                                       newBinary(Binary->Kind, newUnary(ND_DEREF, 
+                                                               newVarNode(Tmp, Tok), Tok), 
                                                                Binary->RHS, Tok), Tok);
 
     return newBinary(ND_COMMA, Expr1, Expr2, Tok);
@@ -816,6 +819,12 @@ static Node* unary(Token** Rest, Token* Tok) {
     return postfix(Rest, Tok);
 }
 
+//'(typeof A)((A += 1) - 1)'
+static Node* newIncDec(Node* Nd, Token* Tok, int Addend) {
+    addType(Nd);
+    return newCast(newAdd(toAssign(newAdd(Nd, newNum(Addend, Tok), Tok)), 
+                                              newNum(-Addend, Tok), Tok), Nd->Ty);
+}
 
 static Node* postfix(Token** Rest, Token* Tok) {
     Node* Nd =  primary(&Tok, Tok);
@@ -841,6 +850,19 @@ static Node* postfix(Token** Rest, Token* Tok) {
             Tok = Tok->Next->Next;
             continue;
         }
+
+        if(equal(Tok, "++")) {
+            Nd = newIncDec(Nd, Tok, 1);
+            Tok = Tok->Next;
+            continue;
+        }
+
+        if(equal(Tok, "--")) {
+            Nd = newIncDec(Nd, Tok, -1);
+            Tok = Tok->Next;
+            continue;
+        }
+
         *Rest = Tok;
         return Nd;
     }
