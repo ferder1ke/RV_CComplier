@@ -260,6 +260,10 @@ static void genExpr(Node *Nd) {
     genExpr(Nd->LHS);
     cast(Nd->LHS->Ty, Nd->Ty);
     return;
+  case ND_NOT:
+    genExpr(Nd->LHS);
+    printLn("  seqz a0, a0"); 
+    return;
   case ND_FUNCALL: {
         int NArgs = 0;
         for(Node* Arg = Nd->Args; Arg; Arg = Arg->Next) {

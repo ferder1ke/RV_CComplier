@@ -134,6 +134,7 @@ typedef enum {
     ND_FUNCALL,     // Function calloc
     ND_COMMA,       // ,
     ND_MEMBER,      // Member
+    ND_NOT,         // ! 
     ND_CAST
 } NodeKind;
 

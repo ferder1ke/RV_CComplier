@@ -180,6 +180,9 @@ void addType(Node* Nd) {
             if(Nd->LHS->Ty->Base->typeKind == TypeVOID)
                 errorTok(Nd->Tok, "dereference a void pointer");
             return;
+        case ND_NOT:
+            Nd->Ty = TypeInt;
+            return;
         case ND_FUNCALL:
             Nd->Ty = Nd->FuncType->ReturnTy;
             return;
