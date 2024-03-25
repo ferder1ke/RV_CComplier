@@ -49,6 +49,89 @@ typedef struct {
     bool IsStatic;
 } VarAttr;
 
+// program = (typedef | functionDefinition | globalVariable)*
+// functionDefinition = declspec declarator "{" compoundStmt*
+// declspec = ("int" | "long" | "short" | "char" 
+//                            | "typedef" | "static"
+//                            | "structDecl" | "unionDecl" | "typedefName" 
+//                            | enumSpecifier)+
+// enumSpecifier = indent ? "{" enumList? "}"
+//               | ident ("{" enumList? "}")?
+// enumList = ident ("=" num)? ("," ident ("=" num)?)*
+// declarator = "*"* ident typeSuffix
+// typeSuffix = ("(" funcParams? ")")?
+// funcParams = param ("," param)*
+// param = declspec declarator
+
+
+// program = "{" compoundStmt
+// compoundStmt = (typedef | declaration | stmt)* "}"
+// declaration =
+//    declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
+
+// stmt = "return" expr ";" 
+//       | "{"compoundStmt 
+//       | exprStmt
+//       | "if" "(" expr ")" stmt ("else" stmt)?
+//       | "for" "(" exprStmt expr? ";" expr? ")" stmt  
+//       | "while" "(" expr ")" stmt  
+// exprStmt = expr? ";"
+
+// expr = assign (',' expr)?
+// assign = bitOr (assignOp assign)?
+// bitOr = bitXor ("|" bitXor)?
+// bitXor = bitAnd ("^" bitAnd)*
+// bitAnd = equality ("&" equality)*
+// assignOp = "=" | "+=" | "*=" | "-=" | "/=" | "%=" | "^=" | "|=" | "&="
+
+// equality = relational ("==" relational | "!=" relational)*
+// relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+// add = mul ("+" mul | "-" mul)*
+// mul = cast ("*" cast | "/" cast | "%" cast)*
+// cast = "(" typename ")" cast | unary
+// unary = ( "+" | "-" | "*" | "&" | "!" | "~") cast |  postfix
+// postfix = primary ("[" expr "]" | "." indent | "->" indent)* || "++" || "--"
+
+// primary = "(" "{" stmt+  "}" ")"
+//          | "(" expr ")" 
+//          | num 
+//          | "sizeof" "(" typename ")" 
+//          | "sizeof" unary 
+//          | ident func-args? 
+//          | str
+
+// structMembers = (declspec declarator (","  declarator)* ";")*
+// structDecl = structUnionDecl
+// unionDecl = structUnionDecl
+// structUnionDecl = ident? ("{" structMembers)?
+
+// typename = declspec abstractDeclarator
+// abstractDeclarator = "*"* ("(" abstractDeclarator ")")? typeSuffix 
+
+// funcall = indent "("(assign (, assign)?)?")"
+// preorder
+
+static Node* compoundStmt(Token** Rest, Token* Tok);
+static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy);
+static Node* stmt(Token** Rest, Token* Tok);
+static Node* exprStmt(Token** Rest, Token* Tok);
+static Node* expr(Token** Rest, Token* Tok);
+static Node* assign(Token** Rest, Token* Tok);
+static Node* equality(Token** Rest, Token* Tok);
+static Node* relational(Token** Rest, Token* Tok);
+static Node* add(Token** Rest, Token* Tok);
+static Node* mul(Token** Rest, Token* Tok);
+static Node* cast(Token** Rest, Token* Tok);
+static Node* primary(Token** Rest, Token* Tok);
+static Node* postfix(Token** Rest, Token* Tok);
+static Node* unary(Token** Rest, Token* Tok);
+static Node* funcall(Token** Rest, Token* Tok);
+static Token* parseTypedef(Token* Tok, Type* BaseTy);
+
+static Node* bitOr(Token** Rest, Token* Tok); 
+static Node* bitXor(Token** Rest, Token* Tok); 
+static Node* bitAnd(Token** Rest, Token* Tok); 
+
 static Scope *Scp = &(Scope) {};
 
 static void enterScope(void) {
@@ -451,82 +534,38 @@ static Type* typename(Token** Rest, Token* Tok) {
     return abstractDeclarator(Rest, Tok, Ty);
 }
 
-// program = (typedef | functionDefinition | globalVariable)*
-// functionDefinition = declspec declarator "{" compoundStmt*
-// declspec = ("int" | "long" | "short" | "char" 
-//                            | "typedef" | "static"
-//                            | "structDecl" | "unionDecl" | "typedefName" 
-//                            | enumSpecifier)+
-// enumSpecifier = indent ? "{" enumList? "}"
-//               | ident ("{" enumList? "}")?
-// enumList = ident ("=" num)? ("," ident ("=" num)?)*
-// declarator = "*"* ident typeSuffix
-// typeSuffix = ("(" funcParams? ")")?
-// funcParams = param ("," param)*
-// param = declspec declarator
+static Node* bitOr(Token** Rest, Token* Tok) {
+    Node* Nd = bitXor(&Tok, Tok);
 
+    while(equal(Tok, "|")) {
+        Token* Start = Tok;
+        Nd = newBinary(ND_BITOR, Nd, bitXor(&Tok, Tok->Next), Start);
+    }
+    *Rest = Tok;
+    return Nd;
+}
 
-// program = "{" compoundStmt
-// compoundStmt = (typedef | declaration | stmt)* "}"
-// declaration =
-//    declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
+static Node* bitXor(Token** Rest, Token* Tok) {
+    Node* Nd = bitAnd(&Tok, Tok);
 
-// stmt = "return" expr ";" 
-//       | "{"compoundStmt 
-//       | exprStmt
-//       | "if" "(" expr ")" stmt ("else" stmt)?
-//       | "for" "(" exprStmt expr? ";" expr? ")" stmt  
-//       | "while" "(" expr ")" stmt  
-// exprStmt = expr? ";"
+    while(equal(Tok, "^")) {
+        Token* Start = Tok;
+        Nd = newBinary(ND_BITXOR, Nd, bitOr(&Tok, Tok->Next), Start);
+    }
+    *Rest = Tok;
+    return Nd;
+}
 
-// expr = assign (',' expr)?
-// assign = equality (assignOp assign)?
-// assignOp = "=" | "+=" | "*=" | "-=" | "/=" | "%="
+static Node* bitAnd(Token** Rest, Token* Tok) {
+    Node* Nd = equality(&Tok, Tok);
 
-// equality = relational ("==" relational | "!=" relational)*
-// relational = add ("<" add | "<=" add | ">" add | ">=" add)*
-// add = mul ("+" mul | "-" mul)*
-// mul = cast ("*" cast | "/" cast | "%" cast)*
-// cast = "(" typename ")" cast | unary
-// unary = ( "+" | "-" | "*" | "&" | "!" | "~") cast |  postfix
-// postfix = primary ("[" expr "]" | "." indent | "->" indent)* || "++" || "--"
-
-// primary = "(" "{" stmt+  "}" ")"
-//          | "(" expr ")" 
-//          | num 
-//          | "sizeof" "(" typename ")" 
-//          | "sizeof" unary 
-//          | ident func-args? 
-//          | str
-
-// structMembers = (declspec declarator (","  declarator)* ";")*
-// structDecl = structUnionDecl
-// unionDecl = structUnionDecl
-// structUnionDecl = ident? ("{" structMembers)?
-
-// typename = declspec abstractDeclarator
-// abstractDeclarator = "*"* ("(" abstractDeclarator ")")? typeSuffix 
-
-// funcall = indent "("(assign (, assign)?)?")"
-// preorder
-
-static Node* compoundStmt(Token** Rest, Token* Tok);
-static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy);
-static Node* stmt(Token** Rest, Token* Tok);
-static Node* exprStmt(Token** Rest, Token* Tok);
-static Node* expr(Token** Rest, Token* Tok);
-static Node* assign(Token** Rest, Token* Tok);
-static Node* equality(Token** Rest, Token* Tok);
-static Node* relational(Token** Rest, Token* Tok);
-static Node* add(Token** Rest, Token* Tok);
-static Node* mul(Token** Rest, Token* Tok);
-static Node* cast(Token** Rest, Token* Tok);
-static Node* primary(Token** Rest, Token* Tok);
-static Node* postfix(Token** Rest, Token* Tok);
-static Node* unary(Token** Rest, Token* Tok);
-static Node* funcall(Token** Rest, Token* Tok);
-static Token* parseTypedef(Token* Tok, Type* BaseTy);
-
+    while(equal(Tok, "&")) {
+        Token* Start = Tok;
+        Nd = newBinary(ND_BITAND, Nd, equality(&Tok, Tok->Next), Start);
+    }
+    *Rest = Tok;
+    return Nd;
+}
 
 static Node* compoundStmt(Token** Rest, Token* Tok) {
    Node* Nd = newNode(ND_BLOCK, Tok);
@@ -674,7 +713,7 @@ static Node* expr(Token** Rest, Token* Tok) {
 }
 
 //Tmp = &A
-//*Tmp = *Tmp + B
+//*Tmp = *Tmp op B
 static Node* toAssign(Node* Binary) {
     addType(Binary->LHS);
     addType(Binary->RHS);
@@ -694,7 +733,7 @@ static Node* toAssign(Node* Binary) {
 }
 
 static Node* assign(Token** Rest, Token* Tok) {
-    Node* Nd = equality(&Tok, Tok);
+    Node* Nd = bitOr(&Tok, Tok);
     
     if(equal(Tok, "=")) {
         Nd = newBinary(ND_ASSIGN, Nd, assign(&Tok, Tok->Next), Tok);    
@@ -719,6 +758,19 @@ static Node* assign(Token** Rest, Token* Tok) {
     if(equal(Tok, "%=")) {
         return toAssign(newBinary(ND_MOD, Nd, assign(Rest, Tok->Next), Tok));   
     }
+
+    if(equal(Tok, "&=")) {
+        return toAssign(newBinary(ND_BITAND, Nd, assign(Rest, Tok->Next), Tok));   
+    }
+
+    if(equal(Tok, "|=")) {
+        return toAssign(newBinary(ND_BITOR, Nd, assign(Rest, Tok->Next), Tok));   
+    }
+
+    if(equal(Tok, "^=")) {
+        return toAssign(newBinary(ND_BITXOR, Nd, assign(Rest, Tok->Next), Tok));   
+    }
+
     *Rest = Tok;
     return Nd;
 }

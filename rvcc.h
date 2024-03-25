@@ -122,6 +122,11 @@ typedef enum {
     ND_LT,          // <
     ND_LE,          // <=
     ND_EXPR_STMT,   // ;
+    
+    ND_BITAND,      // & bit and
+    ND_BITOR,       // | bit and
+    ND_BITXOR,      // ^ bit and
+
     ND_STMT_EXPR,
     ND_ASSIGN,      // assign
     ND_VAR,         // var
