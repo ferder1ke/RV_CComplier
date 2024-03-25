@@ -6,6 +6,10 @@
 
 int main() {
   // [15] 支持if语句
+ASSERT(55, ({ int j=0; for (int i=0; i<=10; i=i+1) j=j+i; j; }));
+  ASSERT(3, ({ int i=3; int j=0; for (int i=0; i<=10; i=i+1) j=j+i; i; }));
+
+
   ASSERT(3, ({ int x; if (0) x=2; else x=3; x; }));
   ASSERT(3, ({ int x; if (1-1) x=2; else x=3; x; }));
   ASSERT(2, ({ int x; if (1) x=2; else x=3; x; }));

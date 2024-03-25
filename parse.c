@@ -609,8 +609,15 @@ static Node* stmt(Token** Rest, Token* Tok){
     if(equal(Tok, "for")) {
         Node* Nd = newNode(ND_FOR, Tok);
         Tok = skip(Tok->Next, "(");
-       
-        Nd->Init = exprStmt(&Tok, Tok);
+        
+        enterScope();
+
+        if(isTypename(Tok)) {
+            Type* BaseTy = declspec(&Tok, Tok, NULL);
+            Nd->Init = declaration(&Tok, Tok, BaseTy);
+        }else {
+            Nd->Init = exprStmt(&Tok, Tok);
+        }
         
         if(!equal(Tok, ";"))
             Nd->Cond = expr(&Tok, Tok);
@@ -621,6 +628,8 @@ static Node* stmt(Token** Rest, Token* Tok){
         Tok = skip(Tok, ")");
         
         Nd->Then = stmt(Rest, Tok);
+
+        leaveScope();
         return Nd;
     }
     
