@@ -41,6 +41,10 @@ Type* TypeChar = &(Type) {
     1  // Align
 };
 
+Type* structType(void) {
+    return newType(TypeSTRUCT, 0, 1);
+}
+
 Type* enumType(void) {
     return newType(TypeENUM, 4, 4);
 }

@@ -1151,27 +1151,39 @@ static Type* structUnionDecl(Token** Rest, Token* Tok) { //struct declaration
     }
 
     if(Tag && !equal(Tok, "{")) {
-        Type* Ty = findTag(Tag);
-        if(!Ty) {
-            errorTok(Tag, "unknown struct Type");
-        }
         *Rest = Tok;
+        Type* Ty = findTag(Tag);
+        if(Ty)
+            return Ty;
+        
+        Ty = structType();
+        Ty->Size = -1;
+        pushTagScope(Tag, Ty);
         return Ty;
     }
+
+    Tok = skip(Tok, "{");
+    Type* Ty = structType();
+    structMembers(Rest, Tok, Ty); //struct members Inits
     
-    Type* Ty = calloc(1, sizeof(Type));
-    Ty->typeKind = TypeSTRUCT;
-    structMembers(Rest, Tok->Next, Ty); //struct members Inits
-    Ty->Align = 1; 
-    
-    if(Tag)
+    if(Tag) {
+        for(TagScope *S = Scp->Tags; S; S = S->Next) {
+            if(equal(Tag, S->Name)) {
+                *(S->Ty) = *Ty;
+                return S->Ty;
+            }
+        }
         pushTagScope(Tag, Ty);
+    }
     return Ty;
 }
 
 static Type* structDecl(Token** Rest, Token* Tok) { //struct declaration
     Type* Ty = structUnionDecl(Rest, Tok);
     Ty->typeKind = TypeSTRUCT;
+
+    if(Ty->Size < 0)
+        return Ty;
     
     int Offset = 0;
     for(Member* mem = Ty->Mem; mem; mem = mem->Next) {

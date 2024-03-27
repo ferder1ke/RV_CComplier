@@ -196,6 +196,7 @@ Type* newType(TypeKind Kind, int Size, int Align);
 Type *copyType(Type *Ty);
 void addType(Node* Nd);
 Type* enumType(void);
+Type* structType(void);
 Type* funcType(Type* ReturnTy);
 Obj *parse(Token *Tok);
 void codegen(Obj* Prog, FILE*  Out);
