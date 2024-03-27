@@ -641,7 +641,7 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
    Node* Cur = &Head;
    enterScope();
    while(!equal(Tok, "}")) {
-       if(isTypename(Tok)) {
+       if(isTypename(Tok) && !equal(Tok->Next, ":")) { //the second condition is determine that is "Label" or "Typename" 
            VarAttr Attr = {};
            Type* BaseTy = declspec(&Tok, Tok, &Attr);
            if(Attr.IsTypedef) {
