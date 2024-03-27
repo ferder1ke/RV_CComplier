@@ -460,15 +460,22 @@ static void createParamLVars(Type* Param) {
     }
 }
 
-static Type* funcParams (Token** Rest, Token* Tok, Type* Ty) {
+static Type* funcParams(Token** Rest, Token* Tok, Type* Ty) {
    Type Head = {};
    Type* Cur = &Head;
    while(!equal(Tok, ")")) {
        if(Cur != &Head)
            Tok = skip(Tok, ",");
-       Type* BaseTy = declspec(&Tok, Tok, NULL);
-       Type* DeclarTy = declarator(&Tok, Tok, BaseTy);
-       Cur->Next = copyType(DeclarTy);
+       Type* Ty2 = declspec(&Tok, Tok, NULL);
+       Ty2 = declarator(&Tok, Tok, Ty2);
+
+       if(Ty2->typeKind == TypeARRAY) {
+           Token* Name = Ty2->Name;
+           Ty2 = pointerTo(Ty2->Base);
+           Ty2->Name = Name;
+       }
+
+       Cur->Next = copyType(Ty2);
        Cur = Cur->Next;
    }
    

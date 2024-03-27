@@ -50,8 +50,11 @@ char int_to_char(int x) { return x; }
 
 static int static_fn() { return 3; }
 
+int param_decay(int x[]) { return x[0]; }
+
 int main() {
-   ASSERT(-5, div_long(-10, 2));
+   ASSERT(3, ({ int x[2]; x[0]=3; param_decay(x); }));
+  ASSERT(-5, div_long(-10, 2));
   // [25] 支持零参函数定义
   ASSERT(3, ret3());
   // [26] 支持最多6个参数的函数定义
