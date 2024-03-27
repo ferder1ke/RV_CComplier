@@ -15,6 +15,7 @@ static Node* Labels;
 static Obj* CurrentFunc;
 
 static char* BrkLabel;
+static char* ContLabel;
 
 typedef struct Scope Scope;
 typedef struct VarScope VarScope;
@@ -84,6 +85,7 @@ typedef struct {
 //       | "goto" ident ";"  
 //       | "while" "(" expr ")" stmt  
 //       | "break" ";"  
+//       | "continue" ";"  
 // exprStmt = expr? ";"
 
 // expr = assign (',' expr)?
@@ -716,9 +718,12 @@ static Node* stmt(Token** Rest, Token* Tok){
         Nd->Cond = expr(&Tok, Tok);
         Tok = skip(Tok, ")");
         char* Brk = BrkLabel;
+        char* Cont = ContLabel;
         BrkLabel = Nd->BrkLabel = newUniqueName();
+        ContLabel = Nd->ContLabel = newUniqueName();
         Nd->Then = stmt(Rest, Tok);
         BrkLabel = Brk;
+        ContLabel = Cont;
         return Nd;
     }
 
@@ -728,9 +733,9 @@ static Node* stmt(Token** Rest, Token* Tok){
         
         enterScope();
         char* Brk = BrkLabel;
-
         BrkLabel = Nd->BrkLabel = newUniqueName();
-
+        char* Cont = ContLabel;
+        ContLabel = Nd->ContLabel = newUniqueName();
         if(isTypename(Tok)) {
             Type* BaseTy = declspec(&Tok, Tok, NULL);
             Nd->Init = declaration(&Tok, Tok, BaseTy);
@@ -750,6 +755,7 @@ static Node* stmt(Token** Rest, Token* Tok){
 
         leaveScope();
         BrkLabel = Brk;
+        ContLabel = Cont;
         return Nd;
     }
     
@@ -785,6 +791,16 @@ static Node* stmt(Token** Rest, Token* Tok){
         return Nd;
     }
 
+    if(equal(Tok, "continue")) {
+        if(!ContLabel){
+            errorTok(Tok, "stray continue");
+        }
+        Node* Nd = newNode(ND_GOTO, Tok);
+        Nd->UniqueLabel = ContLabel;
+        *Rest = skip(Tok->Next, ";");
+        return Nd;
+    }
+    
     if(Tok->Kind == TK_IDENT && equal(Tok->Next, ":")) {
         Node* Nd = newNode(ND_LABEL, Tok);
         Nd->Label = strndup(Tok->Pos, Tok->Len); 

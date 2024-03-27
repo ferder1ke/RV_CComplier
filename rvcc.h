@@ -171,6 +171,7 @@ struct Node{
     Node* Body;
 
     char* BrkLabel;
+    char* ContLabel;
     
     char* FuncName;
     Type* FuncType;
