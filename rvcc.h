@@ -145,6 +145,8 @@ typedef enum {
     ND_NOT,         // ! 
     ND_BITNOT,      // ~ 
     ND_MOD,         // %
+    ND_GOTO,        // 'goto' statement 
+    ND_LABEL,       // 'label' statement
     ND_CAST
 } NodeKind;
 
@@ -178,6 +180,10 @@ struct Node{
     Node* Then;
     Node* Init;
     Node* Inc;
+    char* Label;
+    char* UniqueLabel;
+    Node* GotoNext;
+
     Token* Tok;
     Type* Ty;
    

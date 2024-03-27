@@ -9,6 +9,9 @@
 Obj* Locals;
 Obj* Globals;
 
+static Node* Gotos;
+static Node* Labels;
+
 static Obj* CurrentFunc;
 
 typedef struct Scope Scope;
@@ -75,6 +78,8 @@ typedef struct {
 //       | exprStmt
 //       | "if" "(" expr ")" stmt ("else" stmt)?
 //       | "for" "(" exprStmt expr? ";" expr? ")" stmt  
+//       | "while" "(" expr ")" stmt  
+//       | "goto" ident ";"  
 //       | "while" "(" expr ")" stmt  
 // exprStmt = expr? ";"
 
@@ -460,6 +465,22 @@ static void createParamLVars(Type* Param) {
     }
 }
 
+static void resolveGotoLabels(void) {
+    for(Node* X = Gotos; X; X = X->GotoNext) {
+        for(Node* Y = Labels; Y; Y = Y->GotoNext) {
+            if(!strcmp(X->Label, Y->Label)) {
+                X->UniqueLabel = Y->UniqueLabel;
+                break;
+            }
+        }
+        if(X->UniqueLabel == NULL)
+            errorTok(X->Tok->Next, "use of undeclared Label");
+    }
+
+    Gotos = NULL;
+    Labels = NULL;
+}
+
 static Type* funcParams(Token** Rest, Token* Tok, Type* Ty) {
    Type Head = {};
    Type* Cur = &Head;
@@ -732,6 +753,26 @@ static Node* stmt(Token** Rest, Token* Tok){
             Nd->Els = stmt(&Tok, Tok->Next);
         }
         *Rest = Tok;
+        return Nd;
+    }
+
+    if(equal(Tok, "goto")) {
+        Node* Nd = newNode(ND_GOTO, Tok);
+        Nd->Label = genIdent(Tok->Next);
+        Nd->GotoNext = Gotos;
+        Gotos = Nd;
+        *Rest = skip(Tok->Next->Next, ";");
+        return Nd;
+    }
+    
+    if(Tok->Kind == TK_IDENT && equal(Tok->Next, ":")) {
+        Node* Nd = newNode(ND_LABEL, Tok);
+        Nd->Label = strndup(Tok->Pos, Tok->Len); 
+        Nd->UniqueLabel = newUniqueName();
+        Nd->LHS = stmt(Rest, Tok->Next->Next);
+        
+        Nd->GotoNext = Labels;
+        Labels = Nd;
         return Nd;
     }
 
@@ -1097,6 +1138,7 @@ static Token* function(Token* Tok, Type* BaseTy, VarAttr* Attr) {
     Fn->Body = compoundStmt(&Tok, Tok);
     Fn->Locals = Locals;
     leaveScope();
+    resolveGotoLabels();
     return Tok;
 }
 
