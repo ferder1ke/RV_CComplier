@@ -59,8 +59,9 @@ typedef struct {
 //               | ident ("{" enumList? "}")?
 // enumList = ident ("=" num)? ("," ident ("=" num)?)*
 // declarator = "*"* ident typeSuffix
-// typeSuffix = ("(" funcParams? ")")?
-// funcParams = param ("," param)*
+// typeSuffix = "(" funcParams? | "[" arrayDimensions | ε
+// arrayDimensions = num? "]" typeSuffix
+// funcParams = (param ("," param)*)? ")"
 // param = declspec declarator
 
 
@@ -477,17 +478,30 @@ static Type* funcParams (Token** Rest, Token* Tok, Type* Ty) {
    return Ty;
 }
 
+static Type* arrayDimensions(Token** Rest, Token* Tok, Type* Ty) {
+    
+    if(equal(Tok, "]")) {
+        Ty = typeSuffix(Rest, Tok->Next, Ty);
+        return arrayof(Ty, -1);
+    }
+
+    int Sz = getNumber(Tok);
+    Tok  = skip(Tok->Next, "]");
+    Ty = typeSuffix(Rest, Tok, Ty);
+    return arrayof(Ty, Sz);
+
+}
+
 static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
+    
     if(equal(Tok, "(")) {
         return funcParams(Rest, Tok->Next, Ty);
     }
-
+    
     if(equal(Tok, "[")) {
-        int Sz = getNumber(Tok->Next);
-        Tok  = skip(Tok->Next->Next, "]");
-        Ty = typeSuffix(Rest, Tok, Ty);
-        return arrayof(Ty, Sz);
+       return arrayDimensions(Rest, Tok->Next, Ty);
     }
+
     *Rest = Tok;
     return Ty;
 }
@@ -631,6 +645,8 @@ static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy) {
         }
         
         Type* Ty = declarator(&Tok, Tok, BaseTy);
+        if(Ty->Size < 0)
+            errorTok(Tok, "variable has incomplete type");
         if(Ty->typeKind == TypeVoid)
             errorTok(Tok, "variable declared void");
 

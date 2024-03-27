@@ -11,7 +11,9 @@
 int main() {
 
 ASSERT(1, ({ char i; sizeof(++i); }));
-   ASSERT(1, ({ char i; sizeof(i++); }));    
+  ASSERT(8, sizeof(int(*)[10]));
+  ASSERT(8, sizeof(int(*)[][10]));
+  ASSERT(1, ({ char i; sizeof(i++); }));    
 // [65] 支持对类型进行sizeof
   ASSERT(8, sizeof(-10 + (long)5));
   ASSERT(8, sizeof(-10 - (long)5));
