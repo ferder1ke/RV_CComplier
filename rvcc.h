@@ -170,6 +170,8 @@ struct Node{
     Obj*  Var;
     Node* Body;
 
+    char* BrkLabel;
+    
     char* FuncName;
     Type* FuncType;
     Node* Args;
