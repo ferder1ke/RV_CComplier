@@ -13,6 +13,7 @@ static Node* Gotos;
 static Node* Labels;
 
 static Obj* CurrentFunc;
+static Node* CurrentSwitch;
 
 static char* BrkLabel;
 static char* ContLabel;
@@ -86,6 +87,9 @@ typedef struct {
 //       | "while" "(" expr ")" stmt  
 //       | "break" ";"  
 //       | "continue" ";"  
+//       | "switch" "(" expr ")" stmt  
+//       | "case" num  ":" stmt  
+//       | "default" ":" stmt  
 // exprStmt = expr? ";"
 
 // expr = assign (',' expr)?
@@ -717,6 +721,7 @@ static Node* stmt(Token** Rest, Token* Tok){
         Tok = skip(Tok->Next, "(");
         Nd->Cond = expr(&Tok, Tok);
         Tok = skip(Tok, ")");
+        
         char* Brk = BrkLabel;
         char* Cont = ContLabel;
         BrkLabel = Nd->BrkLabel = newUniqueName();
@@ -724,6 +729,59 @@ static Node* stmt(Token** Rest, Token* Tok){
         Nd->Then = stmt(Rest, Tok);
         BrkLabel = Brk;
         ContLabel = Cont;
+        return Nd;
+    }
+    
+    if(equal(Tok, "switch")) {
+        Node* Nd = newNode(ND_SWITCH, Tok);
+        Tok = skip(Tok->Next, "(");
+        Nd->Cond = expr(&Tok, Tok);
+        Tok = skip(Tok, ")");
+
+        Node* Sw = CurrentSwitch;
+        CurrentSwitch = Nd;
+        char* Brk = BrkLabel;
+
+        BrkLabel = Nd->BrkLabel = newUniqueName();
+        
+        Nd->Then = stmt(Rest, Tok);
+        
+        CurrentSwitch = Sw;
+        BrkLabel = Brk;
+        return Nd;
+    }
+
+    if(equal(Tok, "case")) {
+        if(!CurrentSwitch)
+            errorTok(Tok, "stray case");
+        
+        int Val = getNumber(Tok->Next);
+
+        Node* Nd = newNode(ND_CASE, Tok);
+        
+        Tok = skip(Tok->Next->Next, ":");
+        Nd->Label = newUniqueName();
+        Nd->LHS = stmt(Rest, Tok);
+
+        Nd->Val = Val;
+
+        Nd->CaseNext = CurrentSwitch->CaseNext;
+        CurrentSwitch->CaseNext = Nd;
+        
+        return Nd;
+    }
+
+    if(equal(Tok, "default")) {
+        if(!CurrentSwitch)
+            errorTok(Tok, "stray default");
+        
+        Node* Nd = newNode(ND_CASE, Tok);
+        
+        Tok = skip(Tok->Next, ":");
+        Nd->Label = newUniqueName();
+        Nd->LHS = stmt(Rest, Tok);
+
+        CurrentSwitch->DefaultCase = Nd;
         return Nd;
     }
 

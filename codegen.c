@@ -486,6 +486,33 @@ static void genStmt(Node *Nd) {
       genStmt(N);
     return;
   // 生成return语句
+  case ND_SWITCH:
+    printLn("\n# =====switch语句===============");
+    genExpr(Nd->Cond);
+
+    printLn("  # 遍历跳转到值等于a0的case标签");
+    for (Node *N = Nd->CaseNext; N; N = N->CaseNext) {
+      printLn("  li t0, %ld", N->Val);
+      printLn("  beq a0, t0, %s", N->Label);
+    }
+
+    if (Nd->DefaultCase) {
+      printLn("  # 跳转到default标签");
+      printLn("  j %s", Nd->DefaultCase->Label);
+    }
+
+    printLn("  # 结束switch，跳转break标签");
+    printLn("  j %s", Nd->BrkLabel);
+    // 生成case标签的语句
+    genStmt(Nd->Then);
+    printLn("# switch的break标签，结束switch");
+    printLn("%s:", Nd->BrkLabel);
+    return;
+  case ND_CASE:
+    printLn("# case标签，值为%ld", Nd->Val);
+    printLn("%s:", Nd->Label);
+    genStmt(Nd->LHS);
+    return; 
   case ND_GOTO:
     printLn("  j %s", Nd->UniqueLabel);
     return;

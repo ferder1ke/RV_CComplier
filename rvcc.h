@@ -147,6 +147,8 @@ typedef enum {
     ND_MOD,         // %
     ND_GOTO,        // 'goto' statement 
     ND_LABEL,       // 'label' statement
+    ND_SWITCH,      // 'switch' statement
+    ND_CASE,        // 'case' statement
     ND_CAST
 } NodeKind;
 
@@ -183,6 +185,8 @@ struct Node{
     Node* Then;
     Node* Init;
     Node* Inc;
+    Node* CaseNext;
+    Node* DefaultCase;
     char* Label;
     char* UniqueLabel;
     Node* GotoNext;
