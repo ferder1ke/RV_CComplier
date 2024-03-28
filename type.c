@@ -193,6 +193,8 @@ void addType(Node* Nd) {
         case ND_LOGAND:
             Nd->Ty = TypeInt;
             return;
+        case ND_SHL:
+        case ND_SHR:
         case ND_BITNOT:
             Nd->Ty = Nd->LHS->Ty;
             return;

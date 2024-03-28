@@ -144,6 +144,8 @@ typedef enum {
     ND_MEMBER,      // Member
     ND_NOT,         // ! 
     ND_BITNOT,      // ~ 
+    ND_SHL,         // <<
+    ND_SHR,         // >>
     ND_MOD,         // %
     ND_GOTO,        // 'goto' statement 
     ND_LABEL,       // 'label' statement

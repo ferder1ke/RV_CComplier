@@ -72,8 +72,9 @@ static bool startWith(char* str, char* subStr) {
 }
 
 static int readPunct(char* P) {
-    static char* Kw[] = {"==", "!=", ">=", "<=" ,"->", "+=", "-=", "*=", "/=",
-                         "++", "--", "%=", "&=", "|=", "^=", "&&" , "||"};
+    static char* Kw[] = {"<<=", ">>=","==", "!=", ">=", "<=" ,"->", "+=", 
+                         "-=", "*=", "/=","++", "--", "%=", "&=", "|=", "^=", 
+                         "&&", "||", "<<", ">>"};
     for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); ++i) {
         if(startWith(P, Kw[i]))
             return strlen(Kw[i]);
