@@ -141,6 +141,7 @@ typedef enum {
     ND_DEREF,       // *
     ND_FUNCALL,     // Function calloc
     ND_COMMA,       // ,
+    ND_COND,       // ? : 
     ND_MEMBER,      // Member
     ND_NOT,         // ! 
     ND_BITNOT,      // ~ 

@@ -93,7 +93,8 @@ typedef struct {
 // exprStmt = expr? ";"
 
 // expr = assign (',' expr)?
-// assign = logOr (assignOp assign)?
+// assign = conditional (assignOp assign)?
+// conditional = logOr ("?" expr ":" conditional)?
 // logOr = logAnd ("||" logAnd)*
 // logAnd = bitOr ("&&" bitOr)*
 // bitOr = bitXor ("|" bitXor)*
@@ -135,6 +136,7 @@ static Node* stmt(Token** Rest, Token* Tok);
 static Node* exprStmt(Token** Rest, Token* Tok);
 static Node* expr(Token** Rest, Token* Tok);
 static Node* assign(Token** Rest, Token* Tok);
+static Node* conditional(Token** Rest, Token* Tok);
 static Node* equality(Token** Rest, Token* Tok);
 static Node* relational(Token** Rest, Token* Tok);
 
@@ -919,8 +921,28 @@ static Node* toAssign(Node* Binary) {
     return newBinary(ND_COMMA, Expr1, Expr2, Tok);
 }
 
+static Node* conditional(Token** Rest, Token* Tok) {
+    Node* Cond = logOr(&Tok, Tok);
+
+    if(!equal(Tok, "?")) {
+        *Rest = Tok;
+        return Cond;
+    }
+
+    Node* Nd = newNode(ND_COND, Tok);
+    Nd->Cond = Cond;
+
+    Nd->Then = expr(&Tok, Tok->Next);
+
+    Tok = skip(Tok, ":");
+
+    Nd->Els = conditional(&Tok, Tok);
+    *Rest = Tok;
+    return Nd;
+}
+
 static Node* assign(Token** Rest, Token* Tok) {
-    Node* Nd = logOr(&Tok, Tok);
+    Node* Nd = conditional(&Tok, Tok);
     
     if(equal(Tok, "=")) {
         Nd = newBinary(ND_ASSIGN, Nd, assign(&Tok, Tok->Next), Tok);    

@@ -175,6 +175,14 @@ void addType(Node* Nd) {
                 Nd->Ty = pointerTo(Ty);
             return;
         }
+        case ND_COND:
+            if(Nd->Then->Ty->typeKind == TypeVOID || Nd->Els->Ty->typeKind == TypeVOID) {
+                Nd->Ty = TypeVoid;
+            }else {
+                usualArithConv(&Nd->Then, &Nd->Els);
+                Nd->Ty = Nd->Then->Ty;
+            }
+            return;
         case ND_COMMA:
              Nd->Ty = Nd->RHS->Ty;
              return;

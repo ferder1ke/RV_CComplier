@@ -260,6 +260,20 @@ static void genExpr(Node *Nd) {
     genExpr(Nd->LHS);
     cast(Nd->LHS->Ty, Nd->Ty);
     return;
+  case ND_COND: {
+    int C = count();
+    printLn("\n# =====条件运算符%d===========", C);
+    genExpr(Nd->Cond);
+    printLn("  # 条件判断，为0则跳转");
+    printLn("  beqz a0, .L.else.%d", C);
+    genExpr(Nd->Then);
+    printLn("  # 跳转到条件运算符结尾部分");
+    printLn("  j .L.end.%d", C);
+    printLn(".L.else.%d:", C);
+    genExpr(Nd->Els);
+    printLn(".L.end.%d:", C);
+    return;
+  }
   case ND_NOT:
     genExpr(Nd->LHS);
     printLn("  seqz a0, a0"); 
@@ -300,6 +314,7 @@ static void genExpr(Node *Nd) {
     printLn(".L.end.%d:", C);
     return;
   }
+
   case ND_BITNOT:
     genExpr(Nd->LHS);
     printLn("  # 按位取反");
