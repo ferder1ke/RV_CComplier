@@ -153,7 +153,8 @@ typedef enum {
     ND_LABEL,       // 'label' statement
     ND_SWITCH,      // 'switch' statement
     ND_CASE,        // 'case' statement
-    ND_CAST
+    ND_CAST,
+    ND_MEMZERO      // default init Member to zero    
 } NodeKind;
 
 

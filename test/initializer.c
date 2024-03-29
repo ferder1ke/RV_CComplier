@@ -9,6 +9,13 @@
 #include "test.h"
 
 int main() {
+ASSERT(0, ({ int x[3]={}; x[0]; }));
+  ASSERT(0, ({ int x[3]={}; x[1]; }));
+  ASSERT(0, ({ int x[3]={}; x[2]; }));
+
+  ASSERT(2, ({ int x[2][3]={{1,2}}; x[0][1]; }));
+  ASSERT(0, ({ int x[2][3]={{1,2}}; x[1][0]; }));
+  ASSERT(0, ({ int x[2][3]={{1,2}}; x[1][2]; }));
   // [97] 支持局部变量初始化器
   ASSERT(1, ({ int x[3]={1,2,3}; x[0]; }));
   ASSERT(2, ({ int x[3]={1,2,3}; x[1]; }));

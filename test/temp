@@ -1,0 +1,522 @@
+for i in test/decl.exe test/arith.exe test/typedef.exe test/struct.exe test/string.exe test/cast.exe test/pointer.exe test/enum.exe test/function.exe test/sizeof.exe test/constexpr.exe test/literal.exe test/usualconv.exe test/variable.exe test/initializer.exe test/control.exe test/union.exe; do echo $i; ~/riscv/bin/qemu-riscv64 -L ~/riscv/sysroot ./$i || exit 1; echo; done
+test/decl.exe
+({ _Bool x=0; x; }) => 0
+({ _Bool x=1; x; }) => 1
+({ _Bool x=2; x; }) => 1
+(_Bool)1 => 1
+(_Bool)2 => 1
+(_Bool)(char)256 => 0
+({ long long x; sizeof(x); }) => 8
+({ char x; sizeof(x); }) => 1
+({ short int x; sizeof(x); }) => 2
+({ int short x; sizeof(x); }) => 2
+({ int x; sizeof(x); }) => 4
+({ long int x; sizeof(x); }) => 8
+({ int long x; sizeof(x); }) => 8
+OK
+
+test/arith.exe
+0 ? 1 : 2 => 2
+1 ? 1 : 2 => 1
+0 ? -2 : -1 => -1
+1 ? -2 : -1 => -2
+sizeof(0 ? 1 : 2) => 4
+sizeof(0 ? (long)1 : (long)2) => 8
+0 ? (long)-2 : -1 => -1
+0 ? -2 : (long)-1 => -1
+1 ? (long)-2 : -1 => -2
+1 ? -2 : (long)-1 => -2
+1<<0 => 1
+1<<3 => 8
+5<<1 => 10
+5>>1 => 2
+-1>>1 => -1
+({ int i=1; i<<=0; i; }) => 1
+({ int i=1; i<<=3; i; }) => 8
+({ int i=5; i<<=1; i; }) => 10
+({ int i=5; i>>=1; i; }) => 2
+-1 => -1
+({ int i=-1; i; }) => -1
+({ int i=-1; i>>=1; i; }) => -1
+0&1 => 0
+3&1 => 1
+7&3 => 3
+-1&10 => 10
+0|1 => 1
+0b10000|0b00011 => 19
+0^0 => 0
+0b1111^0b1111 => 0
+0b111000^0b001100 => 52
+({ int i=6; i&=3; i; }) => 2
+({ int i=6; i|=3; i; }) => 7
+({ int i=15; i^=5; i; }) => 10
+17%6 => 5
+((long)17)%6 => 5
+({ int i=10; i%=4; i; }) => 2
+({ long i=10; i%=4; i; }) => 2
+~0 => -1
+~-1 => 0
+!1 => 0
+!2 => 0
+!0 => 1
+!(char)0 => 1
+!(long)3 => 0
+sizeof(!(char)0) => 4
+sizeof(!(long)0) => 4
+({ int i=2; i++; }) => 2
+({ int i=2; i--; }) => 2
+({ int i=2; i++; i; }) => 3
+({ int i=2; i--; i; }) => 1
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; *p++; }) => 1
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; *p--; }) => 1
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; (*p++)--; a[0]; }) => 0
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; (*(p--))--; a[1]; }) => 0
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; (*p)--; a[2]; }) => 2
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; (*p)--; p++; *p; }) => 2
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; (*p++)--; a[0]; }) => 0
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; (*p++)--; a[1]; }) => 0
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; (*p++)--; a[2]; }) => 2
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; (*p++)--; *p; }) => 2
+({ int i=2; ++i; }) => 3
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; ++*p; }) => 2
+({ int a[3]; a[0]=0; a[1]=1; a[2]=2; int *p=a+1; --*p; }) => 0
+({ int i=2; i+=5; i; }) => 7
+({ int i=2; i+=5; }) => 7
+({ int i=5; i-=2; i; }) => 3
+({ int i=5; i-=2; }) => 3
+({ int i=3; i*=2; i; }) => 6
+({ int i=3; i*=2; }) => 6
+({ int i=6; i/=2; i; }) => 3
+({ int i=6; i/=2; }) => 3
+1073741824 * 100 / 100 => 0
+0 => 0
+42 => 42
+5+20-4 => 21
+12 + 34 - 5 => 41
+5+6*7 => 47
+5*(9-6) => 15
+(3+5)/2 => 4
+- -10 => 10
+- - +10 => 10
+0==1 => 0
+42==42 => 1
+0!=1 => 1
+42!=42 => 0
+0<1 => 1
+1<1 => 0
+2<1 => 0
+0<=1 => 1
+1<=1 => 1
+2<=1 => 0
+1>0 => 1
+1>1 => 0
+1>2 => 0
+1>=0 => 1
+1>=1 => 1
+1>=2 => 0
+OK
+
+test/typedef.exe
+({ typedef int t; t x=1; x; }) => 1
+({ typedef struct {int a;} t; t x; x.a=1; x.a; }) => 1
+({ typedef int t; t t=1; t; }) => 1
+({ typedef struct {int a;} t; { typedef int t; } t x; x.a=2; x.a; }) => 2
+({ typedef t; t x; sizeof(x); }) => 4
+({ MyInt x=3; x; }) => 3
+({ MyInt2 x; sizeof(x); }) => 16
+OK
+
+test/struct.exe
+({ struct foo *bar; sizeof(bar); }) => 8
+({ struct T *foo; struct T {int x;}; sizeof(struct T); }) => 4
+({ struct T { struct T *next; int x; } a; struct T b; b.x=1; a.next=&b; a.next->x; }) => 1
+({ typedef struct T T; struct T { int x; }; sizeof(T); }) => 4
+({ struct {char a; short b;} x; sizeof(x); }) => 4
+({ struct {char a; long b;} x; sizeof(x); }) => 16
+({ struct {int a; int b;} x; x.a=1; x.b=2; x.a; }) => 1
+({ struct {int a; int b;} x; x.a=1; x.b=2; x.b; }) => 2
+({ struct {char a; int b; char c;} x; x.a=1; x.b=2; x.c=3; x.a; }) => 1
+({ struct {char a; int b; char c;} x; x.b=1; x.b=2; x.c=3; x.b; }) => 2
+({ struct {char a; int b; char c;} x; x.a=1; x.b=2; x.c=3; x.c; }) => 3
+({ struct {char a; char b;} x[3]; char *p=x; p[0]=0; x[0].a; }) => 0
+({ struct {char a; char b;} x[3]; char *p=x; p[1]=1; x[0].b; }) => 1
+({ struct {char a; char b;} x[3]; char *p=x; p[2]=2; x[1].a; }) => 2
+({ struct {char a; char b;} x[3]; char *p=x; p[3]=3; x[1].b; }) => 3
+({ struct {char a[3]; char b[5];} x; char *p=&x; x.a[0]=6; p[0]; }) => 6
+({ struct {char a[3]; char b[5];} x; char *p=&x; x.b[0]=7; p[3]; }) => 7
+({ struct { struct { char b; } a; } x; x.a.b=6; x.a.b; }) => 6
+({ struct {int a;} x; sizeof(x); }) => 4
+({ struct {int a; int b;} x; sizeof(x); }) => 8
+({ struct {int a, b;} x; sizeof(x); }) => 8
+({ struct {int a[3];} x; sizeof(x); }) => 12
+({ struct {int a;} x[4]; sizeof(x); }) => 16
+({ struct {int a[3];} x[2]; sizeof(x); }) => 24
+({ struct {char a; char b;} x; sizeof(x); }) => 2
+({ struct {} x; sizeof(x); }) => 0
+({ struct {char a; int b;} x; sizeof(x); }) => 8
+({ struct {int a; char b;} x; sizeof(x); }) => 8
+({ struct t {int a; int b;} x; struct t y; sizeof(y); }) => 8
+({ struct t {int a; int b;}; struct t y; sizeof(y); }) => 8
+({ struct t {char a[2];}; { struct t {char a[4];}; } struct t y; sizeof(y); }) => 2
+({ struct t {int x;}; int t=1; struct t y; y.x=2; t+y.x; }) => 3
+({ struct t {char a;} x; struct t *y = &x; x.a=3; y->a; }) => 3
+({ struct t {char a;} x; struct t *y = &x; y->a=3; x.a; }) => 3
+({ struct {int a,b;} x,y; x.a=3; y=x; y.a; }) => 3
+({ struct t {int a,b;}; struct t x; x.a=7; struct t y; struct t *z=&y; *z=x; y.a; }) => 7
+({ struct t {int a,b;}; struct t x; x.a=7; struct t y, *p=&x, *q=&y; *q=*p; y.a; }) => 7
+({ struct t {char a, b;} x, y; x.a=5; y=x; y.a; }) => 5
+({ struct {int a,b;} x,y; x.a=3; y=x; y.a; }) => 3
+({ struct t {int a,b;}; struct t x; x.a=7; struct t y; struct t *z=&y; *z=x; y.a; }) => 7
+({ struct t {int a,b;}; struct t x; x.a=7; struct t y, *p=&x, *q=&y; *q=*p; y.a; }) => 7
+({ struct t {char a, b;} x, y; x.a=5; y=x; y.a; }) => 5
+({ struct t {int a; int b;} x; struct t y; sizeof(y); }) => 8
+({ struct t {int a; int b;}; struct t y; sizeof(y); }) => 8
+OK
+
+test/string.exe
+""[0] => 0
+sizeof("") => 1
+"abc"[0] => 97
+"abc"[1] => 98
+"abc"[2] => 99
+"abc"[3] => 0
+sizeof("abc") => 4
+"\a"[0] => 7
+"\b"[0] => 8
+"\t"[0] => 9
+"\n"[0] => 10
+"\v"[0] => 11
+"\f"[0] => 12
+"\r"[0] => 13
+"\e"[0] => 27
+"\j"[0] => 106
+"\k"[0] => 107
+"\l"[0] => 108
+"\ax\ny"[0] => 7
+"\ax\ny"[1] => 120
+"\ax\ny"[2] => 10
+"\ax\ny"[3] => 121
+"\0"[0] => 0
+"\20"[0] => 16
+"\101"[0] => 65
+"\1500"[0] => 104
+"\x00"[0] => 0
+"\x77"[0] => 119
+OK
+
+test/cast.exe
+(int)8590066177 => 131585
+(short)8590066177 => 513
+(char)8590066177 => 1
+(long)1 => 1
+(long)&*(int *)0 => 0
+({ int x=512; *(char *)&x=1; x; }) => 513
+({ int x=5; long y=(long)&x; *(int*)y; }) => 5
+OK
+
+test/pointer.exe
+({ int x=3; *&x; }) => 3
+({ int x=3; int *y=&x; int **z=&y; **z; }) => 3
+({ int x=3; int y=5; *(&x+1); }) => 5
+({ int x=3; int y=5; *(&y-1); }) => 3
+({ int x=3; int y=5; *(&x-(-1)); }) => 5
+({ int x=3; int *y=&x; *y=5; x; }) => 5
+({ int x=3; int y=5; *(&x+1)=7; y; }) => 7
+({ int x=3; int y=5; *(&y-2+1)=7; x; }) => 7
+({ int x=3; (&x+2)-&x+3; }) => 5
+({ int x, y; x=3; y=5; x+y; }) => 8
+({ int x=3, y=5; x+y; }) => 8
+({ int x[2]; int *y=&x; *y=3; *x; }) => 3
+({ int x[3]; *x=3; *(x+1)=4; *(x+2)=5; *x; }) => 3
+({ int x[3]; *x=3; *(x+1)=4; *(x+2)=5; *(x+1); }) => 4
+({ int x[3]; *x=3; *(x+1)=4; *(x+2)=5; *(x+2); }) => 5
+({ int x[2][3]; int *y=x; *y=0; **x; }) => 0
+({ int x[2][3]; int *y=x; *(y+1)=1; *(*x+1); }) => 1
+({ int x[2][3]; int *y=x; *(y+2)=2; *(*x+2); }) => 2
+({ int x[2][3]; int *y=x; *(y+3)=3; **(x+1); }) => 3
+({ int x[2][3]; int *y=x; *(y+4)=4; *(*(x+1)+1); }) => 4
+({ int x[2][3]; int *y=x; *(y+5)=5; *(*(x+1)+2); }) => 5
+({ int x[3]; *x=3; x[1]=4; x[2]=5; *x; }) => 3
+({ int x[3]; *x=3; x[1]=4; x[2]=5; *(x+1); }) => 4
+({ int x[3]; *x=3; x[1]=4; x[2]=5; *(x+2); }) => 5
+({ int x[3]; *x=3; x[1]=4; x[2]=5; *(x+2); }) => 5
+({ int x[3]; *x=3; x[1]=4; 2[x]=5; *(x+2); }) => 5
+({ int x[2][3]; int *y=x; y[0]=0; x[0][0]; }) => 0
+({ int x[2][3]; int *y=x; y[1]=1; x[0][1]; }) => 1
+({ int x[2][3]; int *y=x; y[2]=2; x[0][2]; }) => 2
+({ int x[2][3]; int *y=x; y[3]=3; x[1][0]; }) => 3
+({ int x[2][3]; int *y=x; y[4]=4; x[1][1]; }) => 4
+({ int x[2][3]; int *y=x; y[5]=5; x[1][2]; }) => 5
+OK
+
+test/enum.exe
+({ enum { zero, one, two }; zero; }) => 0
+({ enum { zero, one, two }; one; }) => 1
+({ enum { zero, one, two }; two; }) => 2
+({ enum { five=5, six, seven }; five; }) => 5
+({ enum { five=5, six, seven }; six; }) => 6
+({ enum { zero, five=5, three=3, four }; zero; }) => 0
+({ enum { zero, five=5, three=3, four }; five; }) => 5
+({ enum { zero, five=5, three=3, four }; three; }) => 3
+({ enum { zero, five=5, three=3, four }; four; }) => 4
+({ enum { zero, one, two } x; sizeof(x); }) => 4
+({ enum t { zero, one, two }; enum t y; sizeof(y); }) => 4
+OK
+
+test/function.exe
+({ int x[2]; x[0]=3; param_decay(x); }) => 3
+div_long(-10, 2) => -5
+ret3() => 3
+add2(3, 5) => 8
+sub2(5, 3) => 2
+add6(1,2,3,4,5,6) => 21
+add6(1,2,add6(3,4,5,6,7,8),9,10,11) => 66
+add6(1,2,add6(3,add6(4,5,6,7,8,9),10,11,12,13),14,15,16) => 136
+bool_fn_add(3) => 1
+bool_fn_sub(3) => 0
+bool_fn_add(-3) => 1
+bool_fn_sub(-3) => 0
+bool_fn_add(0) => 1
+bool_fn_sub(0) => 1
+add2(3,4) => 7
+sub2(4,3) => 1
+fib(9) => 55
+static_fn() => 3
+({ sub_char(7, 3, 3); }) => 1
+*g1_ptr() => 3
+int_to_char(261) => 5
+OK
+
+test/sizeof.exe
+({ char i; sizeof(++i); }) => 1
+sizeof(int(*)[10]) => 8
+sizeof(int(*)[][10]) => 8
+({ char i; sizeof(i++); }) => 1
+sizeof(-10 + (long)5) => 8
+sizeof(-10 - (long)5) => 8
+sizeof(-10 * (long)5) => 8
+sizeof(-10 / (long)5) => 8
+sizeof((long)-10 + 5) => 8
+sizeof((long)-10 - 5) => 8
+sizeof((long)-10 * 5) => 8
+sizeof((long)-10 / 5) => 8
+sizeof(char) => 1
+sizeof(short) => 2
+sizeof(short int) => 2
+sizeof(int short) => 2
+sizeof(int) => 4
+sizeof(long) => 8
+sizeof(long int) => 8
+sizeof(long int) => 8
+sizeof(char *) => 8
+sizeof(int *) => 8
+sizeof(long *) => 8
+sizeof(int **) => 8
+sizeof(int(*)[4]) => 8
+sizeof(int*[4]) => 32
+sizeof(int[4]) => 16
+sizeof(int[3][4]) => 48
+sizeof(struct {int a; int b;}) => 8
+OK
+
+test/constexpr.exe
+({ enum { ten=1+2+3+4 }; ten; }) => 10
+({ int i=0; switch(3) { case 5-2+0*3: i++; } i; }) => 1
+({ int x[1+1]; sizeof(x); }) => 8
+({ char x[8-2]; sizeof(x); }) => 6
+({ char x[2*3]; sizeof(x); }) => 6
+({ char x[12/4]; sizeof(x); }) => 3
+({ char x[12%10]; sizeof(x); }) => 2
+({ char x[0b110&0b101]; sizeof(x); }) => 4
+({ char x[0b110|0b101]; sizeof(x); }) => 7
+({ char x[0b111^0b001]; sizeof(x); }) => 6
+({ char x[1<<2]; sizeof(x); }) => 4
+({ char x[4>>1]; sizeof(x); }) => 2
+({ char x[(1==1)+1]; sizeof(x); }) => 2
+({ char x[(1!=1)+1]; sizeof(x); }) => 1
+({ char x[(1<1)+1]; sizeof(x); }) => 1
+({ char x[(1<=1)+1]; sizeof(x); }) => 2
+({ char x[1?2:3]; sizeof(x); }) => 2
+({ char x[0?2:3]; sizeof(x); }) => 3
+({ char x[(1,3)]; sizeof(x); }) => 3
+({ char x[!0+1]; sizeof(x); }) => 2
+({ char x[!1+1]; sizeof(x); }) => 1
+({ char x[~-3]; sizeof(x); }) => 2
+({ char x[(5||6)+1]; sizeof(x); }) => 2
+({ char x[(0||0)+1]; sizeof(x); }) => 1
+({ char x[(1&&1)+1]; sizeof(x); }) => 2
+({ char x[(1&&0)+1]; sizeof(x); }) => 1
+({ char x[(int)3]; sizeof(x); }) => 3
+({ char x[(char)0xffffff0f]; sizeof(x); }) => 15
+({ char x[(short)0xffff010f]; sizeof(x); }) => 271
+({ char x[(int)0xfffffffffff+5]; sizeof(x); }) => 4
+({ char x[(int*)0+2]; sizeof(x); }) => 8
+({ char x[(int*)16-1]; sizeof(x); }) => 12
+({ char x[(int*)16-(int*)4]; sizeof(x); }) => 3
+OK
+
+test/literal.exe
+0777 => 511
+0x0 => 0
+0xa => 10
+0XA => 10
+0xbeef => 48879
+0xBEEF => 48879
+0XBEEF => 48879
+0b0 => 0
+0b1 => 1
+0b101111 => 47
+0B101111 => 47
+'a' => 97
+'\n' => 10
+'\x7f' => 127
+OK
+
+test/usualconv.exe
+-10 + (long)5 => -5
+-10 - (long)5 => -15
+-10 * (long)5 => -50
+-10 / (long)5 => -2
+-2 < (long)-1 => 1
+-2 <= (long)-1 => 1
+-2 > (long)-1 => 0
+-2 >= (long)-1 => 0
+(long)-2 < -1 => 1
+(long)-2 <= -1 => 1
+(long)-2 > -1 => 0
+(long)-2 >= -1 => 0
+2147483647 + 2147483647 + 2 => 0
+({ long x; x=-1; x; }) => -1
+({ char x[3]; x[0]=0; x[1]=1; x[2]=2; char *y=x+1; y[0]; }) => 1
+({ char x[3]; x[0]=0; x[1]=1; x[2]=2; char *y=x+1; y[-1]; }) => 0
+({ struct t {char a;} x, y; x.a=5; y=x; y.a; }) => 5
+OK
+
+test/variable.exe
+({ char *x[3]; sizeof(x); }) => 24
+({ char (*x)[3]; sizeof(x); }) => 8
+({ char (x); sizeof(x); }) => 1
+({ char (x)[3]; sizeof(x); }) => 3
+({ char (x[3])[4]; sizeof(x); }) => 12
+({ char (x[3])[4]; sizeof(x[0]); }) => 4
+({ char *x[3]; char y; x[0]=&y; y=3; x[0][0]; }) => 3
+({ char x[3]; char (*y)[3]=x; y[0][0]=4; y[0][0]; }) => 4
+({ short x; sizeof(x); }) => 2
+({ long x; sizeof(x); }) => 8
+({ int a; a=3; a; }) => 3
+({ int a=3; a; }) => 3
+({ int a=3; int z=5; a+z; }) => 8
+({ int a=3; a; }) => 3
+({ int a=3; int z=5; a+z; }) => 8
+({ int a; int b; a=b=3; a+b; }) => 6
+({ int foo=3; foo; }) => 3
+({ int foo123=3; int bar=5; foo123+bar; }) => 8
+({ int x; sizeof(x); }) => 4
+({ int x; sizeof x; }) => 4
+({ int *x; sizeof(x); }) => 8
+({ int x[4]; sizeof(x); }) => 16
+({ int x[3][4]; sizeof(x); }) => 48
+({ int x[3][4]; sizeof(*x); }) => 16
+({ int x[3][4]; sizeof(**x); }) => 4
+({ int x[3][4]; sizeof(**x) + 1; }) => 5
+({ int x[3][4]; sizeof **x + 1; }) => 5
+({ int x[3][4]; sizeof(**x + 1); }) => 4
+({ int x=1; sizeof(x=2); }) => 4
+({ int x=1; sizeof(x=2); x; }) => 1
+g1 => 0
+({ g1=3; g1; }) => 3
+({ g2[0]=0; g2[1]=1; g2[2]=2; g2[3]=3; g2[0]; }) => 0
+({ g2[0]=0; g2[1]=1; g2[2]=2; g2[3]=3; g2[1]; }) => 1
+({ g2[0]=0; g2[1]=1; g2[2]=2; g2[3]=3; g2[2]; }) => 2
+({ g2[0]=0; g2[1]=1; g2[2]=2; g2[3]=3; g2[3]; }) => 3
+sizeof(g1) => 4
+sizeof(g2) => 16
+({ char x=1; x; }) => 1
+({ char x=1; char y=2; x; }) => 1
+({ char x=1; char y=2; y; }) => 2
+({ char x; sizeof(x); }) => 1
+({ char x[10]; sizeof(x); }) => 10
+({ int x=2; { int x=3; } x; }) => 2
+({ int x=2; { int x=3; } int y=4; x; }) => 2
+({ int x=2; { x=3; } x; }) => 3
+({ int x; int y; char z; char *a=&y; char *b=&z; b-a; }) => 7
+({ int x; char y; int z; char *a=&y; char *b=&z; b-a; }) => 1
+OK
+
+test/initializer.exe
+({ int x[3]={}; x[0]; }) => 0
+({ int x[3]={}; x[1]; }) => 0
+({ int x[3]={}; x[2]; }) => 0
+({ int x[2][3]={{1,2}}; x[0][1]; }) => 2
+({ int x[2][3]={{1,2}}; x[1][0]; }) => 0
+({ int x[2][3]={{1,2}}; x[1][2]; }) => 0
+({ int x[3]={1,2,3}; x[0]; }) => 1
+({ int x[3]={1,2,3}; x[1]; }) => 2
+({ int x[3]={1,2,3}; x[2]; }) => 3
+({ int x[2][3]={{1,2,3},{4,5,6}}; x[0][1]; }) => 2
+({ int x[2][3]={{1,2,3},{4,5,6}}; x[1][0]; }) => 4
+({ int x[2][3]={{1,2,3},{4,5,6}}; x[1][2]; }) => 6
+OK
+
+test/control.exe
+({ int i=0; switch(0) { case 0:i=5;break; case 1:i=6;break; case 2:i=7;break; } i; }) => 5
+({ int i=0; switch(1) { case 0:i=5;break; case 1:i=6;break; case 2:i=7;break; } i; }) => 6
+({ int i=0; switch(2) { case 0:i=5;break; case 1:i=6;break; case 2:i=7;break; } i; }) => 7
+({ int i=0; switch(3) { case 0:i=5;break; case 1:i=6;break; case 2:i=7;break; } i; }) => 0
+({ int i=0; switch(0) { case 0:i=5;break; default:i=7; } i; }) => 5
+({ int i=0; switch(1) { case 0:i=5;break; default:i=7; } i; }) => 7
+({ int i=0; switch(1) { case 0: 0; case 1: 0; case 2: 0; i=2; } i; }) => 2
+({ int i=0; switch(3) { case 0: 0; case 1: 0; case 2: 0; i=2; } i; }) => 0
+({ int i=0; switch(-1) { case 0xffffffff: i=3; break; } i; }) => 3
+({ int i=0; int j=0; for (;i<10;i++) { if (i>5) continue; j++; } i; }) => 10
+({ int i=0; int j=0; for (;i<10;i++) { if (i>5) continue; j++; } j; }) => 6
+({ int i=0; int j=0; for(;!i;) { for (;j!=10;j++) continue; break; } j; }) => 10
+({ int i=0; int j=0; while (i++<10) { if (i>5) continue; j++; } i; }) => 11
+({ int i=0; int j=0; while (i++<10) { if (i>5) continue; j++; } j; }) => 5
+({ int i=0; int j=0; while(!i) { while (j++!=10) continue; break; } j; }) => 11
+({ int i=0; for(;i<10;i++) { if (i == 3) break; } i; }) => 3
+({ int i=0; while (1) { if (i++ == 3) break; } i; }) => 4
+({ int i=0; for(;i<10;i++) { for (;;) break; if (i == 3) break; } i; }) => 3
+({ int i=0; while (1) { while(1) break; if (i++ == 3) break; } i; }) => 4
+({ typedef int foo; goto foo; foo:; 1; }) => 1
+({ int i=0; goto a; a: i++; b: i++; c: i++; i; }) => 3
+({ int i=0; goto e; d: i++; e: i++; f: i++; i; }) => 2
+({ int i=0; goto i; g: i++; h: i++; i: i++; i; }) => 1
+0||1 => 1
+0||(2-2)||5 => 1
+0||0 => 0
+0||(2-2) => 0
+0&&1 => 0
+(2-2)&&5 => 0
+1&&5 => 1
+({ int j=0; for (int i=0; i<=10; i=i+1) j=j+i; j; }) => 55
+({ int i=3; int j=0; for (int i=0; i<=10; i=i+1) j=j+i; i; }) => 3
+({ int x; if (0) x=2; else x=3; x; }) => 3
+({ int x; if (1-1) x=2; else x=3; x; }) => 3
+({ int x; if (1) x=2; else x=3; x; }) => 2
+({ int x; if (2-1) x=2; else x=3; x; }) => 2
+({ int i=0; int j=0; for (i=0; i<=10; i=i+1) j=i+j; j; }) => 55
+({ int i=0; while(i<10) i=i+1; i; }) => 10
+({ 1; {2;} 3; }) => 3
+({ ;;; 5; }) => 5
+({ int i=0; while(i<10) i=i+1; i; }) => 10
+({ int i=0; int j=0; while(i<=10) {j=i+j; i=i+1;} j; }) => 55
+(1,2,3) => 3
+({ int i=2, j=3; (i=5,j)=6; i; }) => 5
+({ int i=2, j=3; (i=5,j)=6; j; }) => 6
+OK
+
+test/union.exe
+({ union { int a; char b[6]; } x; sizeof(x); }) => 8
+({ union { int a; char b[4]; } x; x.a = 515; x.b[0]; }) => 3
+({ union { int a; char b[4]; } x; x.a = 515; x.b[1]; }) => 2
+({ union { int a; char b[4]; } x; x.a = 515; x.b[2]; }) => 0
+({ union { int a; char b[4]; } x; x.a = 515; x.b[3]; }) => 0
+({ union {int a,b;} x,y; x.a=3; y.a=5; y=x; y.a; }) => 3
+({ union {struct {int a,b;} c;} x,y; x.c.b=3; y.c.b=5; y=x; y.c.b; }) => 3
+OK
+
+test/driver.sh
+testing -o ... passed
+testing --help ... passed
+OK

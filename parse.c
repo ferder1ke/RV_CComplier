@@ -740,7 +740,7 @@ static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy) {
 static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
     if(Init->Ty->typeKind == TypeARRAY) {
        Tok = skip(Tok, "{");
-       for(int i = 0 ; i < Init->Ty->ArrayLen; ++i) {
+       for(int i = 0 ; i < Init->Ty->ArrayLen && !equal(Tok, "}"); ++i) {
            if(i > 0)
                Tok = skip(Tok, ",");
            initializer2(&Tok, Tok, Init->Children[i]);
@@ -777,16 +777,20 @@ static Node* createLVarInit(Initializer* Init, Type* Ty, InitDesig* Desig, Token
         }
         return Nd;
     }
+    if(!Init->Expr)
+        return newNode(ND_NULL_EXPR, Tok);
     Node* LHS = initDesigExpr(Desig, Tok);
-    Node* RHS = Init->Expr;
-
-    return newBinary(ND_ASSIGN, LHS, RHS, Tok);
+    return newBinary(ND_ASSIGN, LHS, Init->Expr, Tok);
 }
 
 static Node* LVarInitializer(Token** Rest, Token* Tok, Obj* Var) {
     Initializer* Init = initializer(Rest, Tok, Var->Ty); 
     InitDesig Desig = {NULL, 0, Var};
-    return createLVarInit(Init, Var->Ty, &Desig, Tok);
+   
+    Node* LHS = newNode(ND_MEMZERO, Tok);
+    LHS->Var = Var;
+    Node* RHS = createLVarInit(Init, Var->Ty, &Desig, Tok);
+    return newBinary(ND_COMMA, LHS, RHS, Tok);
 }
 
 static Node* stmt(Token** Rest, Token* Tok){
