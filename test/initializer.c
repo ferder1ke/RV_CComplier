@@ -9,6 +9,15 @@
 #include "test.h"
 
 int main() {
+    // [100] 支持字符串字面量的初始化
+  ASSERT('a', ({ char x[4]="abc"; x[0]; }));
+  ASSERT('c', ({ char x[4]="abc"; x[2]; }));
+  ASSERT(0, ({ char x[4]="abc"; x[3]; }));
+  ASSERT('a', ({ char x[2][4]={"abc","def"}; x[0][0]; }));
+  ASSERT(0, ({ char x[2][4]={"abc","def"}; x[0][3]; }));
+  ASSERT('d', ({ char x[2][4]={"abc","def"}; x[1][0]; }));
+  ASSERT('f', ({ char x[2][4]={"abc","def"}; x[1][2]; }));
+
   ASSERT(4, ({ int x[2][3]={{1,2,3,4},{4,5,6}}; x[1][0]; }));
   ASSERT(0, ({ int x[3]={}; x[0]; }));
   ASSERT(0, ({ int x[3]={}; x[1]; }));

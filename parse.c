@@ -98,7 +98,10 @@ typedef struct {
 // compoundStmt = (typedef | declaration | stmt)* "}"
 // declaration =
 //    declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
-// Initializer = "{" Initializer ("," Initializer)* "}" | assign
+
+// Initializer = stringInitializer | arrayInitializer | assign
+// stringInitializer = stringLiteral
+// arrayInitializer = "{" Initializer ("," Initializer)* "}" | assign
 
 // stmt = "return" expr ";" 
 //       | "{"compoundStmt 
@@ -156,6 +159,7 @@ typedef struct {
 static Node* compoundStmt(Token** Rest, Token* Tok);
 static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy);
 static Node* stmt(Token** Rest, Token* Tok);
+static void initializer2(Token** Rest, Token* Tok, Initializer* Init); 
 static Node* exprStmt(Token** Rest, Token* Tok);
 static Node* expr(Token** Rest, Token* Tok);
 static Node* assign(Token** Rest, Token* Tok);
@@ -748,19 +752,35 @@ static Token* skipExcessElement(Token* Tok) {
     return Tok;
 }
 
+static void stringInitializer(Token** Rest, Token* Tok, Initializer* Init) {
+    int Len = MIN(Init->Ty->ArrayLen, Tok->Ty->ArrayLen);
+    for(int i = 0; i < Len; ++i) {
+        Init->Children[i]->Expr = newNum(Tok->Str[i], Tok);
+    }
+    *Rest = Tok->Next;
+}
+
+static void arrayInitializer(Token** Rest, Token* Tok, Initializer* Init) {
+   Tok = skip(Tok, "{");
+   for(int i = 0 ; !consume(Rest, Tok, "}") ; ++i) {
+       if(i > 0)
+           Tok = skip(Tok, ",");
+       if(i < Init->Ty->ArrayLen)
+           initializer2(&Tok, Tok, Init->Children[i]);
+       else
+           Tok = skipExcessElement(Tok);
+   }
+}
+
 static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
+    if(Init->Ty->typeKind == TypeARRAY && Tok->Kind == TK_STR) {
+        stringInitializer(Rest, Tok, Init);
+        return;
+    }
+
     if(Init->Ty->typeKind == TypeARRAY) {
-       Tok = skip(Tok, "{");
-       for(int i = 0 ; !consume(Rest, Tok, "}") ; ++i) {
-           if(i > 0)
-               Tok = skip(Tok, ",");
-           if(i < Init->Ty->ArrayLen)
-               initializer2(&Tok, Tok, Init->Children[i]);
-           else
-               Tok = skipExcessElement(Tok);
-       }
-       *Rest = skip(Tok, "}");
-       return;
+        arrayInitializer(Rest, Tok, Init);
+        return;
     }
     Init->Expr = assign(Rest, Tok);
 }
