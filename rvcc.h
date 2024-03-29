@@ -204,6 +204,7 @@ struct Node{
 
 struct Member {
     Member* Next;
+    int Idx;
     int Offset;
     Type* Ty;
     Token* Name;

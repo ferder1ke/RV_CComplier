@@ -55,6 +55,7 @@ typedef struct InitDesig InitDesig;
 struct InitDesig {
     InitDesig* Next;
     int Idx;
+    Member* Mem;
     Obj* Var;
 };
 
@@ -100,9 +101,11 @@ typedef struct {
 // declaration =
 //    declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
 
-// Initializer = stringInitializer | arrayInitializer | assign
+// Initializer = stringInitializer | arrayInitializer |
+//               stuctInitializer  | assign
 // stringInitializer = stringLiteral
 // arrayInitializer = "{" Initializer ("," Initializer)* "}" | assign
+// structInitializer = "{" Initializer ("," Initializer)* "}" | assign
 
 // stmt = "return" expr ";" 
 //       | "{"compoundStmt 
@@ -233,6 +236,16 @@ static Initializer* newInitializer(Type* Ty, bool IsFlexible) {
     Initializer* Init = calloc(1, sizeof(Initializer));
     Init->Ty = Ty;
 
+    if(Ty->typeKind == TypeSTRUCT) {
+        int Len = 0;
+        for(Member* Mem = Ty->Mem; Mem; Mem = Mem->Next)
+            ++Len;
+        Init->Children = calloc(Len, sizeof(Initializer*));
+        for(Member* Mem = Ty->Mem; Mem; Mem = Mem->Next) {
+            Init->Children[Mem->Idx] = newInitializer(Mem->Ty, false);
+        }
+        return Init;
+    }
     if(Ty->typeKind == TypeARRAY) {
         if(IsFlexible && Ty->Size < 0) {
             Init->IsFlexible = true;
@@ -799,9 +812,30 @@ static void arrayInitializer(Token** Rest, Token* Tok, Initializer* Init) {
    }
 }
 
+static void structInitializer(Token** Rest, Token* Tok, Initializer* Init) {
+   Tok = skip(Tok, "{");
+   Member* Mem = Init->Ty->Mem;
+   while(!consume(Rest, Tok, "}")) {
+       if(Mem != Init->Ty->Mem) {
+           Tok = skip(Tok, ",");
+       }
+       if(Mem) {
+           initializer2(&Tok, Tok, Init->Children[Mem->Idx]);
+           Mem = Mem->Next;
+       }else {
+           Tok = skipExcessElement(Tok);
+       }
+   }
+}
+
 static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
     if(Init->Ty->typeKind == TypeARRAY && Tok->Kind == TK_STR) {
         stringInitializer(Rest, Tok, Init);
+        return;
+    }
+
+    if(Init->Ty->typeKind == TypeSTRUCT) {
+        structInitializer(Rest, Tok, Init);
         return;
     }
 
@@ -822,7 +856,12 @@ static Initializer* initializer(Token** Rest, Token* Tok, Type* Ty, Type** NewTy
 static Node* initDesigExpr(InitDesig* Desig, Token* Tok) {//calculate the Variables Offset
     if(Desig->Var)
         return newVarNode(Desig->Var, Tok);
-
+    if(Desig->Mem) {
+        Node* Nd = newUnary(ND_MEMBER, initDesigExpr(Desig->Next, Tok), Tok);
+        Nd->Mem = Desig->Mem;
+        return Nd;
+    }
+    
     Node* LHS = initDesigExpr(Desig->Next, Tok);
     Node* RHS = newNum(Desig->Idx, Tok);
 
@@ -839,6 +878,17 @@ static Node* createLVarInit(Initializer* Init, Type* Ty, InitDesig* Desig, Token
         }
         return Nd;
     }
+    
+    if(Ty->typeKind == TypeSTRUCT) {
+        Node* Nd = newNode(ND_NULL_EXPR, Tok);
+        for(Member* Mem = Ty->Mem; Mem; Mem = Mem->Next) {
+            InitDesig Desig2 = {Desig, 0, Mem};
+            Node* RHS = createLVarInit(Init->Children[Mem->Idx], Mem->Ty, &Desig2, Tok);
+            Nd = newBinary(ND_COMMA, Nd, RHS, Tok);
+        }
+        return Nd;
+    }
+
     if(!Init->Expr)
         return newNode(ND_NULL_EXPR, Tok);
     Node* LHS = initDesigExpr(Desig, Tok);
@@ -847,7 +897,7 @@ static Node* createLVarInit(Initializer* Init, Type* Ty, InitDesig* Desig, Token
 
 static Node* LVarInitializer(Token** Rest, Token* Tok, Obj* Var) {
     Initializer* Init = initializer(Rest, Tok, Var->Ty, &Var->Ty); 
-    InitDesig Desig = {NULL, 0, Var};
+    InitDesig Desig = {NULL, 0, NULL, Var};
    
     Node* LHS = newNode(ND_MEMZERO, Tok);
     LHS->Var = Var;
@@ -1528,7 +1578,7 @@ static bool isFunction(Token* Tok) {
 static void structMembers(Token** Rest, Token* Tok, Type* Ty){
     Member Head = {};
     Member* Cur = &Head;
-
+    int Idx = 0;
     while(!equal(Tok, "}")) {
         Type* BaseTy = declspec(&Tok, Tok, NULL);    
         int First = true;
@@ -1540,6 +1590,7 @@ static void structMembers(Token** Rest, Token* Tok, Type* Ty){
             Member* Mem = calloc(1, sizeof(Member));
             Mem->Ty = declarator(&Tok, Tok, BaseTy);
             Mem->Name = Mem->Ty->Name;
+            Mem->Idx = Idx++;
             Cur = Cur->Next = Mem;
         }
     }

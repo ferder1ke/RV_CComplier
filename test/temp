@@ -1,6 +1,45 @@
+gcc -std=c11 -g -fno-common   -c -o tokenize.o tokenize.c
+gcc -std=c11 -g -fno-common   -c -o string.o string.c
+gcc -std=c11 -g -fno-common   -c -o type.o type.c
+gcc -std=c11 -g -fno-common   -c -o main.o main.c
+gcc -std=c11 -g -fno-common   -c -o parse.o parse.c
+gcc -std=c11 -g -fno-common   -c -o codegen.o codegen.c
+gcc -std=c11 -g -fno-common -o rvcc tokenize.o string.o type.o main.o parse.o codegen.o 
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/decl.c | ./rvcc -o test/decl.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/decl.exe test/decl.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/struct.c | ./rvcc -o test/struct.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/struct.exe test/struct.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/arith.c | ./rvcc -o test/arith.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/arith.exe test/arith.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/typedef.c | ./rvcc -o test/typedef.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/typedef.exe test/typedef.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/literal.c | ./rvcc -o test/literal.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/literal.exe test/literal.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/string.c | ./rvcc -o test/string.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/string.exe test/string.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/cast.c | ./rvcc -o test/cast.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/cast.exe test/cast.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/pointer.c | ./rvcc -o test/pointer.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/pointer.exe test/pointer.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/function.c | ./rvcc -o test/function.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/function.exe test/function.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/sizeof.c | ./rvcc -o test/sizeof.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/sizeof.exe test/sizeof.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/constexpr.c | ./rvcc -o test/constexpr.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/constexpr.exe test/constexpr.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/usualconv.c | ./rvcc -o test/usualconv.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/usualconv.exe test/usualconv.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/variable.c | ./rvcc -o test/variable.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/variable.exe test/variable.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/enum.c | ./rvcc -o test/enum.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/enum.exe test/enum.s -xc test/common
 ~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/initializer.c | ./rvcc -o test/initializer.s -
 ~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/initializer.exe test/initializer.s -xc test/common
-for i in test/decl.exe test/arith.exe test/typedef.exe test/struct.exe test/string.exe test/cast.exe test/pointer.exe test/enum.exe test/function.exe test/sizeof.exe test/constexpr.exe test/literal.exe test/usualconv.exe test/variable.exe test/initializer.exe test/control.exe test/union.exe; do echo $i; ~/riscv/bin/qemu-riscv64 -L ~/riscv/sysroot ./$i || exit 1; echo; done
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/control.c | ./rvcc -o test/control.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/control.exe test/control.s -xc test/common
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -o- -E -P -C test/union.c | ./rvcc -o test/union.s -
+~/riscv/bin/riscv64-unknown-linux-gnu-gcc -static -o test/union.exe test/union.s -xc test/common
+for i in test/decl.exe test/struct.exe test/arith.exe test/typedef.exe test/literal.exe test/string.exe test/cast.exe test/pointer.exe test/function.exe test/sizeof.exe test/constexpr.exe test/usualconv.exe test/variable.exe test/enum.exe test/initializer.exe test/control.exe test/union.exe; do echo $i; ~/riscv/bin/qemu-riscv64 -L ~/riscv/sysroot ./$i || exit 1; echo; done
 test/decl.exe
 ({ _Bool x=0; x; }) => 0
 ({ _Bool x=1; x; }) => 1
@@ -15,6 +54,53 @@ test/decl.exe
 ({ int x; sizeof(x); }) => 4
 ({ long int x; sizeof(x); }) => 8
 ({ int long x; sizeof(x); }) => 8
+OK
+
+test/struct.exe
+({ struct foo *bar; sizeof(bar); }) => 8
+({ struct T *foo; struct T {int x;}; sizeof(struct T); }) => 4
+({ struct T { struct T *next; int x; } a; struct T b; b.x=1; a.next=&b; a.next->x; }) => 1
+({ typedef struct T T; struct T { int x; }; sizeof(T); }) => 4
+({ struct {char a; short b;} x; sizeof(x); }) => 4
+({ struct {char a; long b;} x; sizeof(x); }) => 16
+({ struct {int a; int b;} x; x.a=1; x.b=2; x.a; }) => 1
+({ struct {int a; int b;} x; x.a=1; x.b=2; x.b; }) => 2
+({ struct {char a; int b; char c;} x; x.a=1; x.b=2; x.c=3; x.a; }) => 1
+({ struct {char a; int b; char c;} x; x.b=1; x.b=2; x.c=3; x.b; }) => 2
+({ struct {char a; int b; char c;} x; x.a=1; x.b=2; x.c=3; x.c; }) => 3
+({ struct {char a; char b;} x[3]; char *p=x; p[0]=0; x[0].a; }) => 0
+({ struct {char a; char b;} x[3]; char *p=x; p[1]=1; x[0].b; }) => 1
+({ struct {char a; char b;} x[3]; char *p=x; p[2]=2; x[1].a; }) => 2
+({ struct {char a; char b;} x[3]; char *p=x; p[3]=3; x[1].b; }) => 3
+({ struct {char a[3]; char b[5];} x; char *p=&x; x.a[0]=6; p[0]; }) => 6
+({ struct {char a[3]; char b[5];} x; char *p=&x; x.b[0]=7; p[3]; }) => 7
+({ struct { struct { char b; } a; } x; x.a.b=6; x.a.b; }) => 6
+({ struct {int a;} x; sizeof(x); }) => 4
+({ struct {int a; int b;} x; sizeof(x); }) => 8
+({ struct {int a, b;} x; sizeof(x); }) => 8
+({ struct {int a[3];} x; sizeof(x); }) => 12
+({ struct {int a;} x[4]; sizeof(x); }) => 16
+({ struct {int a[3];} x[2]; sizeof(x); }) => 24
+({ struct {char a; char b;} x; sizeof(x); }) => 2
+({ struct {} x; sizeof(x); }) => 0
+({ struct {char a; int b;} x; sizeof(x); }) => 8
+({ struct {int a; char b;} x; sizeof(x); }) => 8
+({ struct t {int a; int b;} x; struct t y; sizeof(y); }) => 8
+({ struct t {int a; int b;}; struct t y; sizeof(y); }) => 8
+({ struct t {char a[2];}; { struct t {char a[4];}; } struct t y; sizeof(y); }) => 2
+({ struct t {int x;}; int t=1; struct t y; y.x=2; t+y.x; }) => 3
+({ struct t {char a;} x; struct t *y = &x; x.a=3; y->a; }) => 3
+({ struct t {char a;} x; struct t *y = &x; y->a=3; x.a; }) => 3
+({ struct {int a,b;} x,y; x.a=3; y=x; y.a; }) => 3
+({ struct t {int a,b;}; struct t x; x.a=7; struct t y; struct t *z=&y; *z=x; y.a; }) => 7
+({ struct t {int a,b;}; struct t x; x.a=7; struct t y, *p=&x, *q=&y; *q=*p; y.a; }) => 7
+({ struct t {char a, b;} x, y; x.a=5; y=x; y.a; }) => 5
+({ struct {int a,b;} x,y; x.a=3; y=x; y.a; }) => 3
+({ struct t {int a,b;}; struct t x; x.a=7; struct t y; struct t *z=&y; *z=x; y.a; }) => 7
+({ struct t {int a,b;}; struct t x; x.a=7; struct t y, *p=&x, *q=&y; *q=*p; y.a; }) => 7
+({ struct t {char a, b;} x, y; x.a=5; y=x; y.a; }) => 5
+({ struct t {int a; int b;} x; struct t y; sizeof(y); }) => 8
+({ struct t {int a; int b;}; struct t y; sizeof(y); }) => 8
 OK
 
 test/arith.exe
@@ -128,51 +214,21 @@ test/typedef.exe
 ({ MyInt2 x; sizeof(x); }) => 16
 OK
 
-test/struct.exe
-({ struct foo *bar; sizeof(bar); }) => 8
-({ struct T *foo; struct T {int x;}; sizeof(struct T); }) => 4
-({ struct T { struct T *next; int x; } a; struct T b; b.x=1; a.next=&b; a.next->x; }) => 1
-({ typedef struct T T; struct T { int x; }; sizeof(T); }) => 4
-({ struct {char a; short b;} x; sizeof(x); }) => 4
-({ struct {char a; long b;} x; sizeof(x); }) => 16
-({ struct {int a; int b;} x; x.a=1; x.b=2; x.a; }) => 1
-({ struct {int a; int b;} x; x.a=1; x.b=2; x.b; }) => 2
-({ struct {char a; int b; char c;} x; x.a=1; x.b=2; x.c=3; x.a; }) => 1
-({ struct {char a; int b; char c;} x; x.b=1; x.b=2; x.c=3; x.b; }) => 2
-({ struct {char a; int b; char c;} x; x.a=1; x.b=2; x.c=3; x.c; }) => 3
-({ struct {char a; char b;} x[3]; char *p=x; p[0]=0; x[0].a; }) => 0
-({ struct {char a; char b;} x[3]; char *p=x; p[1]=1; x[0].b; }) => 1
-({ struct {char a; char b;} x[3]; char *p=x; p[2]=2; x[1].a; }) => 2
-({ struct {char a; char b;} x[3]; char *p=x; p[3]=3; x[1].b; }) => 3
-({ struct {char a[3]; char b[5];} x; char *p=&x; x.a[0]=6; p[0]; }) => 6
-({ struct {char a[3]; char b[5];} x; char *p=&x; x.b[0]=7; p[3]; }) => 7
-({ struct { struct { char b; } a; } x; x.a.b=6; x.a.b; }) => 6
-({ struct {int a;} x; sizeof(x); }) => 4
-({ struct {int a; int b;} x; sizeof(x); }) => 8
-({ struct {int a, b;} x; sizeof(x); }) => 8
-({ struct {int a[3];} x; sizeof(x); }) => 12
-({ struct {int a;} x[4]; sizeof(x); }) => 16
-({ struct {int a[3];} x[2]; sizeof(x); }) => 24
-({ struct {char a; char b;} x; sizeof(x); }) => 2
-({ struct {} x; sizeof(x); }) => 0
-({ struct {char a; int b;} x; sizeof(x); }) => 8
-({ struct {int a; char b;} x; sizeof(x); }) => 8
-({ struct t {int a; int b;} x; struct t y; sizeof(y); }) => 8
-({ struct t {int a; int b;}; struct t y; sizeof(y); }) => 8
-({ struct t {char a[2];}; { struct t {char a[4];}; } struct t y; sizeof(y); }) => 2
-({ struct t {int x;}; int t=1; struct t y; y.x=2; t+y.x; }) => 3
-({ struct t {char a;} x; struct t *y = &x; x.a=3; y->a; }) => 3
-({ struct t {char a;} x; struct t *y = &x; y->a=3; x.a; }) => 3
-({ struct {int a,b;} x,y; x.a=3; y=x; y.a; }) => 3
-({ struct t {int a,b;}; struct t x; x.a=7; struct t y; struct t *z=&y; *z=x; y.a; }) => 7
-({ struct t {int a,b;}; struct t x; x.a=7; struct t y, *p=&x, *q=&y; *q=*p; y.a; }) => 7
-({ struct t {char a, b;} x, y; x.a=5; y=x; y.a; }) => 5
-({ struct {int a,b;} x,y; x.a=3; y=x; y.a; }) => 3
-({ struct t {int a,b;}; struct t x; x.a=7; struct t y; struct t *z=&y; *z=x; y.a; }) => 7
-({ struct t {int a,b;}; struct t x; x.a=7; struct t y, *p=&x, *q=&y; *q=*p; y.a; }) => 7
-({ struct t {char a, b;} x, y; x.a=5; y=x; y.a; }) => 5
-({ struct t {int a; int b;} x; struct t y; sizeof(y); }) => 8
-({ struct t {int a; int b;}; struct t y; sizeof(y); }) => 8
+test/literal.exe
+0777 => 511
+0x0 => 0
+0xa => 10
+0XA => 10
+0xbeef => 48879
+0xBEEF => 48879
+0XBEEF => 48879
+0b0 => 0
+0b1 => 1
+0b101111 => 47
+0B101111 => 47
+'a' => 97
+'\n' => 10
+'\x7f' => 127
 OK
 
 test/string.exe
@@ -249,20 +305,6 @@ test/pointer.exe
 ({ int x[2][3]; int *y=x; y[3]=3; x[1][0]; }) => 3
 ({ int x[2][3]; int *y=x; y[4]=4; x[1][1]; }) => 4
 ({ int x[2][3]; int *y=x; y[5]=5; x[1][2]; }) => 5
-OK
-
-test/enum.exe
-({ enum { zero, one, two }; zero; }) => 0
-({ enum { zero, one, two }; one; }) => 1
-({ enum { zero, one, two }; two; }) => 2
-({ enum { five=5, six, seven }; five; }) => 5
-({ enum { five=5, six, seven }; six; }) => 6
-({ enum { zero, five=5, three=3, four }; zero; }) => 0
-({ enum { zero, five=5, three=3, four }; five; }) => 5
-({ enum { zero, five=5, three=3, four }; three; }) => 3
-({ enum { zero, five=5, three=3, four }; four; }) => 4
-({ enum { zero, one, two } x; sizeof(x); }) => 4
-({ enum t { zero, one, two }; enum t y; sizeof(y); }) => 4
 OK
 
 test/function.exe
@@ -357,23 +399,6 @@ test/constexpr.exe
 ({ char x[(int*)16-(int*)4]; sizeof(x); }) => 3
 OK
 
-test/literal.exe
-0777 => 511
-0x0 => 0
-0xa => 10
-0XA => 10
-0xbeef => 48879
-0xBEEF => 48879
-0XBEEF => 48879
-0b0 => 0
-0b1 => 1
-0b101111 => 47
-0B101111 => 47
-'a' => 97
-'\n' => 10
-'\x7f' => 127
-OK
-
 test/usualconv.exe
 -10 + (long)5 => -5
 -10 - (long)5 => -15
@@ -445,7 +470,36 @@ sizeof(g2) => 16
 ({ int x; char y; int z; char *a=&y; char *b=&z; b-a; }) => 1
 OK
 
+test/enum.exe
+({ enum { zero, one, two }; zero; }) => 0
+({ enum { zero, one, two }; one; }) => 1
+({ enum { zero, one, two }; two; }) => 2
+({ enum { five=5, six, seven }; five; }) => 5
+({ enum { five=5, six, seven }; six; }) => 6
+({ enum { zero, five=5, three=3, four }; zero; }) => 0
+({ enum { zero, five=5, three=3, four }; five; }) => 5
+({ enum { zero, five=5, three=3, four }; three; }) => 3
+({ enum { zero, five=5, three=3, four }; four; }) => 4
+({ enum { zero, one, two } x; sizeof(x); }) => 4
+({ enum t { zero, one, two }; enum t y; sizeof(y); }) => 4
+OK
+
 test/initializer.exe
+({ struct {int a; int b; int c;} x={1,2,3}; x.a; }) => 1
+({ struct {int a; int b; int c;} x={1,2,3}; x.b; }) => 2
+({ struct {int a; int b; int c;} x={1,2,3}; x.c; }) => 3
+({ struct {int a; int b; int c;} x={1}; x.a; }) => 1
+({ struct {int a; int b; int c;} x={1}; x.b; }) => 0
+({ struct {int a; int b; int c;} x={1}; x.c; }) => 0
+({ struct {int a; int b;} x[2]={{1,2},{3,4}}; x[0].a; }) => 1
+({ struct {int a; int b;} x[2]={{1,2},{3,4}}; x[0].b; }) => 2
+({ struct {int a; int b;} x[2]={{1,2},{3,4}}; x[1].a; }) => 3
+({ struct {int a; int b;} x[2]={{1,2},{3,4}}; x[1].b; }) => 4
+({ struct {int a; int b;} x[2]={{1,2}}; x[1].b; }) => 0
+({ struct {int a; int b;} x={}; x.a; }) => 0
+({ struct {int a; int b;} x={}; x.b; }) => 0
+({ typedef struct {int a,b,c,d,e,f;} T; T x={1,2,3,4,5,6}; T y; y=x; y.e; }) => 5
+({ typedef struct {int a,b;} T; T x={1,2}; T y, z; z=y=x; z.b; }) => 2
 ({ int x[]={1,2,3,4}; x[3]; }) => 4
 ({ int x[]={1,2,3,4}; sizeof(x); }) => 16
 ({ char x[]="foo"; sizeof(x); }) => 4
