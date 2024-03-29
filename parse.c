@@ -48,6 +48,7 @@ struct Initializer {
     Initializer** Children; //Children probably Array which contain Initializer pointer , there is use the pointer which point at Initializer pointer
     //for unest one
     Node* Expr;
+    bool IsFlexible;
 };
 
 typedef struct InitDesig InitDesig;
@@ -228,14 +229,18 @@ static VarScope* pushScope(char* Name) {
     return S;
 }
 
-static Initializer* newInitializer(Type* Ty) {
+static Initializer* newInitializer(Type* Ty, bool IsFlexible) {
     Initializer* Init = calloc(1, sizeof(Initializer));
     Init->Ty = Ty;
 
     if(Ty->typeKind == TypeARRAY) {
+        if(IsFlexible && Ty->Size < 0) {
+            Init->IsFlexible = true;
+            return Init;
+        }
         Init->Children = calloc(Ty->ArrayLen, sizeof(Initializer*));
         for(int i = 0; i < Ty->ArrayLen; ++i) {
-            Init->Children[i] = newInitializer(Ty->Base);
+            Init->Children[i] = newInitializer(Ty->Base, false);
         }
     }
     return Init;
@@ -722,8 +727,6 @@ static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy) {
         }
         
         Type* Ty = declarator(&Tok, Tok, BaseTy);
-        if(Ty->Size < 0)
-            errorTok(Tok, "variable has incomplete type");
         if(Ty->typeKind == TypeVOID)
             errorTok(Tok, "variable declared void");
 
@@ -734,7 +737,12 @@ static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy) {
             Cur->Next = newUnary(ND_EXPR_STMT, Expr, Tok);
             Cur = Cur->Next;
         }
+        if(Var->Ty->Size < 0)
+            errorTok(Tok, "variable has incomplete type");
+        if(Var->Ty->typeKind == TypeVOID)
+            errorTok(Tok, "variable declared void");
     }
+    
     Node* Nd = newNode(ND_BLOCK, Tok);
     Nd->Body = Head.Next;
     *Rest = Tok->Next;
@@ -753,6 +761,9 @@ static Token* skipExcessElement(Token* Tok) {
 }
 
 static void stringInitializer(Token** Rest, Token* Tok, Initializer* Init) {
+    if(Init->IsFlexible) {
+        *Init = *newInitializer(arrayof(Init->Ty->Base, Tok->Ty->ArrayLen), false);
+    }
     int Len = MIN(Init->Ty->ArrayLen, Tok->Ty->ArrayLen);
     for(int i = 0; i < Len; ++i) {
         Init->Children[i]->Expr = newNum(Tok->Str[i], Tok);
@@ -760,8 +771,24 @@ static void stringInitializer(Token** Rest, Token* Tok, Initializer* Init) {
     *Rest = Tok->Next;
 }
 
+static int counterArrayInitElements(Token* Tok, Type* Ty) {
+    Initializer* Dummy = newInitializer(Ty->Base, false);
+    int i = 0;
+
+    for(; !equal(Tok, "}"); ++i) {
+        if(i != 0)
+            Tok = skip(Tok, ",");
+        initializer2(&Tok, Tok, Dummy);
+    }
+    return i;
+}
+
 static void arrayInitializer(Token** Rest, Token* Tok, Initializer* Init) {
    Tok = skip(Tok, "{");
+   if(Init->IsFlexible) {
+       int Len = counterArrayInitElements(Tok, Init->Ty);
+       *Init = *newInitializer(arrayof(Init->Ty->Base, Len), false);
+   }
    for(int i = 0 ; !consume(Rest, Tok, "}") ; ++i) {
        if(i > 0)
            Tok = skip(Tok, ",");
@@ -785,9 +812,10 @@ static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
     Init->Expr = assign(Rest, Tok);
 }
 
-static Initializer* initializer(Token** Rest, Token* Tok, Type* Ty) {
-   Initializer* Init = newInitializer(Ty);
+static Initializer* initializer(Token** Rest, Token* Tok, Type* Ty, Type** NewTy) {
+   Initializer* Init = newInitializer(Ty, true);
    initializer2(Rest, Tok, Init);
+   *NewTy = Init->Ty;
    return Init;
 }
 
@@ -818,7 +846,7 @@ static Node* createLVarInit(Initializer* Init, Type* Ty, InitDesig* Desig, Token
 }
 
 static Node* LVarInitializer(Token** Rest, Token* Tok, Obj* Var) {
-    Initializer* Init = initializer(Rest, Tok, Var->Ty); 
+    Initializer* Init = initializer(Rest, Tok, Var->Ty, &Var->Ty); 
     InitDesig Desig = {NULL, 0, Var};
    
     Node* LHS = newNode(ND_MEMZERO, Tok);
