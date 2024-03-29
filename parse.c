@@ -35,6 +35,28 @@ static Type* unionDecl(Token** Rest, Token* Tok);
 static Type* enumSpecifier(Token** Rest, Token* Tok);
 static bool isTypename(Token* Tok);
 
+// mutable Initializer
+// Initializer could be nested
+// eg: int x[2][2] = {{1, 2},{3 , 4}};
+typedef struct Initializer Initializer;
+struct Initializer {
+    Initializer* Next;
+    Type* Ty;
+    Token* Tok;
+
+    //for nest Initializer
+    Initializer** Children; //Children probably Array which contain Initializer pointer , there is use the pointer which point at Initializer pointer
+    //for unest one
+    Node* Expr;
+};
+
+typedef struct InitDesig InitDesig;
+struct InitDesig {
+    InitDesig* Next;
+    int Idx;
+    Obj* Var;
+};
+
 struct Scope {
     Scope* Next;
     VarScope* Vars;
@@ -76,6 +98,7 @@ typedef struct {
 // compoundStmt = (typedef | declaration | stmt)* "}"
 // declaration =
 //    declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
+// Initializer = "{" Initializer ("," Initializer)* "}" | assign
 
 // stmt = "return" expr ";" 
 //       | "{"compoundStmt 
@@ -149,6 +172,7 @@ static Node* postfix(Token** Rest, Token* Tok);
 static Node* unary(Token** Rest, Token* Tok);
 static Node* funcall(Token** Rest, Token* Tok);
 static Token* parseTypedef(Token* Tok, Type* BaseTy);
+static Node* LVarInitializer(Token** Rest, Token* Tok, Obj* Var);
 
 static Node* logOr(Token** Rest, Token* Tok); 
 static Node* logAnd(Token** Rest, Token* Tok); 
@@ -200,6 +224,18 @@ static VarScope* pushScope(char* Name) {
     return S;
 }
 
+static Initializer* newInitializer(Type* Ty) {
+    Initializer* Init = calloc(1, sizeof(Initializer));
+    Init->Ty = Ty;
+
+    if(Ty->typeKind == TypeARRAY) {
+        Init->Children = calloc(Ty->ArrayLen, sizeof(Initializer*));
+        for(int i = 0; i < Ty->ArrayLen; ++i) {
+            Init->Children[i] = newInitializer(Ty->Base);
+        }
+    }
+    return Init;
+}
 
 static Node* newNode(NodeKind Kind,Token* Tok) {
     Node* Nd = calloc(1, sizeof(Node));
@@ -684,25 +720,73 @@ static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy) {
         Type* Ty = declarator(&Tok, Tok, BaseTy);
         if(Ty->Size < 0)
             errorTok(Tok, "variable has incomplete type");
-        if(Ty->typeKind == TypeVoid)
+        if(Ty->typeKind == TypeVOID)
             errorTok(Tok, "variable declared void");
 
         Obj* Var = newLVar(genIdent(Ty->Name), Ty);//regist varibles
 
-        if(!equal(Tok, "="))
-            continue;
-        
-        Node* LHS = newVarNode(Var, Ty->Name);
-        Node* RHS = assign(&Tok, Tok->Next);
-        Node* Nd = newBinary(ND_ASSIGN, LHS, RHS, Tok);
-        
-        Cur->Next = newUnary(ND_EXPR_STMT, Nd, Tok);
-        Cur = Cur->Next;
+        if(equal(Tok, "=")) {
+            Node* Expr = LVarInitializer(&Tok, Tok->Next, Var);
+            Cur->Next = newUnary(ND_EXPR_STMT, Expr, Tok);
+            Cur = Cur->Next;
+        }
     }
     Node* Nd = newNode(ND_BLOCK, Tok);
     Nd->Body = Head.Next;
     *Rest = Tok->Next;
     return Nd;
+}
+
+static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
+    if(Init->Ty->typeKind == TypeARRAY) {
+       Tok = skip(Tok, "{");
+       for(int i = 0 ; i < Init->Ty->ArrayLen; ++i) {
+           if(i > 0)
+               Tok = skip(Tok, ",");
+           initializer2(&Tok, Tok, Init->Children[i]);
+       }
+       *Rest = skip(Tok, "}");
+       return;
+    }
+    Init->Expr = assign(Rest, Tok);
+}
+
+static Initializer* initializer(Token** Rest, Token* Tok, Type* Ty) {
+   Initializer* Init = newInitializer(Ty);
+   initializer2(Rest, Tok, Init);
+   return Init;
+}
+
+static Node* initDesigExpr(InitDesig* Desig, Token* Tok) {//calculate the Variables Offset
+    if(Desig->Var)
+        return newVarNode(Desig->Var, Tok);
+
+    Node* LHS = initDesigExpr(Desig->Next, Tok);
+    Node* RHS = newNum(Desig->Idx, Tok);
+
+    return newUnary(ND_DEREF, newAdd(LHS, RHS, Tok), Tok);
+}
+
+static Node* createLVarInit(Initializer* Init, Type* Ty, InitDesig* Desig, Token* Tok) {
+    if(Ty->typeKind == TypeARRAY) {
+        Node* Nd = newNode(ND_NULL_EXPR, Tok);
+        for(int I = 0; I < Ty->ArrayLen; ++I) {
+            InitDesig Desig2 = {Desig, I};
+            Node* RHS = createLVarInit(Init->Children[I], Ty->Base, &Desig2, Tok);
+            Nd = newBinary(ND_COMMA, Nd, RHS, Tok);
+        }
+        return Nd;
+    }
+    Node* LHS = initDesigExpr(Desig, Tok);
+    Node* RHS = Init->Expr;
+
+    return newBinary(ND_ASSIGN, LHS, RHS, Tok);
+}
+
+static Node* LVarInitializer(Token** Rest, Token* Tok, Obj* Var) {
+    Initializer* Init = initializer(Rest, Tok, Var->Ty); 
+    InitDesig Desig = {NULL, 0, Var};
+    return createLVarInit(Init, Var->Ty, &Desig, Tok);
 }
 
 static Node* stmt(Token** Rest, Token* Tok){

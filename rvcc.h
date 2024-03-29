@@ -79,7 +79,7 @@ struct Type {
     Type* Base;
     Token* Name;
     
-    int ArraryLen;
+    int ArrayLen;
     Member* Mem; 
     //Function
     Type* ReturnTy;
@@ -111,6 +111,7 @@ struct Obj {
 
 /*semantic analysis*/
 typedef enum {
+    ND_NULL_EXPR,   // null expression
     ND_ADD,         // +
     ND_SUB,         // -
     ND_MUL,         // *

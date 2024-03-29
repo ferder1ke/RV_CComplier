@@ -98,7 +98,7 @@ Type* funcType(Type* ReturnTy) {
 Type* arrayof(Type* Base, int Len) {
     Type* Ty = newType(TypeARRAY, Base->Size * Len, Base->Align);
     Ty->Base = Base;
-    Ty->ArraryLen = Len;
+    Ty->ArrayLen = Len;
 
     return Ty;
 }
