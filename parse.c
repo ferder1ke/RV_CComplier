@@ -737,13 +737,27 @@ static Node* declaration(Token** Rest, Token* Tok, Type* BaseTy) {
     return Nd;
 }
 
+static Token* skipExcessElement(Token* Tok) {
+    if(equal(Tok, "{")) {
+        Tok = skipExcessElement(Tok->Next);
+        Tok = skip(Tok, "}");
+        return Tok;
+    }
+
+    assign(&Tok, Tok);
+    return Tok;
+}
+
 static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
     if(Init->Ty->typeKind == TypeARRAY) {
        Tok = skip(Tok, "{");
-       for(int i = 0 ; i < Init->Ty->ArrayLen && !equal(Tok, "}"); ++i) {
+       for(int i = 0 ; !consume(Rest, Tok, "}") ; ++i) {
            if(i > 0)
                Tok = skip(Tok, ",");
-           initializer2(&Tok, Tok, Init->Children[i]);
+           if(i < Init->Ty->ArrayLen)
+               initializer2(&Tok, Tok, Init->Children[i]);
+           else
+               Tok = skipExcessElement(Tok);
        }
        *Rest = skip(Tok, "}");
        return;
