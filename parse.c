@@ -954,6 +954,14 @@ static void writeGVarData(Initializer* Init, Type* Ty, char* Buf, int Offset) {
         }
         return;
     }
+
+    if(Ty->typeKind == TypeSTRUCT) {
+        for(Member* mem = Ty->Mem; mem; mem = mem->Next) {
+            writeGVarData(Init->Children[mem->Idx], mem->Ty, Buf, Offset + mem->Offset);
+        }
+        return;
+    }
+
     if(Init->Expr) {
         writeBuf(Buf + Offset, eval(Init->Expr), Ty->Size);
     }
