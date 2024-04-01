@@ -101,11 +101,12 @@ typedef struct {
 // declaration =
 //    declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
 
-// Initializer = stringInitializer | arrayInitializer |
-//               stuctInitializer  | assign
+// Initializer = stringInitializer  | arrayInitializer |
+//               structInitializer  | unionInitializer | assign
 // stringInitializer = stringLiteral
 // arrayInitializer = "{" Initializer ("," Initializer)* "}" | assign
 // structInitializer = "{" Initializer ("," Initializer)* "}" | assign
+// unionInitializer = "{" Initializer "}"  
 
 // stmt = "return" expr ";" 
 //       | "{"compoundStmt 
@@ -236,7 +237,7 @@ static Initializer* newInitializer(Type* Ty, bool IsFlexible) {
     Initializer* Init = calloc(1, sizeof(Initializer));
     Init->Ty = Ty;
 
-    if(Ty->typeKind == TypeSTRUCT) {
+    if(Ty->typeKind == TypeSTRUCT || Ty->typeKind == TypeUNION) {
         int Len = 0;
         for(Member* Mem = Ty->Mem; Mem; Mem = Mem->Next)
             ++Len;
@@ -812,6 +813,12 @@ static void arrayInitializer(Token** Rest, Token* Tok, Initializer* Init) {
    }
 }
 
+static void unionInitializer(Token** Rest, Token* Tok, Initializer* Init) {
+    Tok = skip(Tok, "{");
+    initializer2(&Tok, Tok, Init->Children[0]);
+    *Rest = skip(Tok, "}");
+}
+
 static void structInitializer(Token** Rest, Token* Tok, Initializer* Init) {
    Tok = skip(Tok, "{");
    Member* Mem = Init->Ty->Mem;
@@ -831,6 +838,11 @@ static void structInitializer(Token** Rest, Token* Tok, Initializer* Init) {
 static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
     if(Init->Ty->typeKind == TypeARRAY && Tok->Kind == TK_STR) {
         stringInitializer(Rest, Tok, Init);
+        return;
+    }
+
+    if(Init->Ty->typeKind == TypeUNION) {
+        unionInitializer(Rest, Tok, Init);
         return;
     }
 
@@ -887,6 +899,11 @@ static Node* createLVarInit(Initializer* Init, Type* Ty, InitDesig* Desig, Token
         return Nd;
     }
     
+    if(Ty->typeKind == TypeUNION) {
+        InitDesig Desig2 = {Desig, 0, Ty->Mem};
+        return createLVarInit(Init->Children[0], Ty->Mem->Ty, &Desig2, Tok);
+    }
+
     if(Ty->typeKind == TypeSTRUCT && !Init->Expr) {
         Node* Nd = newNode(ND_NULL_EXPR, Tok);
         for(Member* Mem = Ty->Mem; Mem; Mem = Mem->Next) {
