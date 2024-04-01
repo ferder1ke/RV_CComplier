@@ -835,6 +835,14 @@ static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
     }
 
     if(Init->Ty->typeKind == TypeSTRUCT) {
+        if(!equal(Tok, "{")) {
+            Node* Expr = assign(Rest, Tok);
+            addType(Expr);
+            if(Expr->Ty->typeKind == TypeSTRUCT) {
+                Init->Expr = Expr;
+                return;
+            }
+        }
         structInitializer(Rest, Tok, Init);
         return;
     }
@@ -879,7 +887,7 @@ static Node* createLVarInit(Initializer* Init, Type* Ty, InitDesig* Desig, Token
         return Nd;
     }
     
-    if(Ty->typeKind == TypeSTRUCT) {
+    if(Ty->typeKind == TypeSTRUCT && !Init->Expr) {
         Node* Nd = newNode(ND_NULL_EXPR, Tok);
         for(Member* Mem = Ty->Mem; Mem; Mem = Mem->Next) {
             InitDesig Desig2 = {Desig, 0, Mem};

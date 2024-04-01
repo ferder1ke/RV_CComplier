@@ -10,6 +10,8 @@
 
 int main() {
 
+   ASSERT(1, ({ typedef struct {int a,b;} T; T x={1,2}; T y=x; y.a; }));
+
   ASSERT(1, ({ struct {int a; int b; int c;} x={1,2,3}; x.a; }));
   ASSERT(2, ({ struct {int a; int b; int c;} x={1,2,3}; x.b; }));
   ASSERT(3, ({ struct {int a; int b; int c;} x={1,2,3}; x.c; }));
