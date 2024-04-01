@@ -182,6 +182,7 @@ static Node* unary(Token** Rest, Token* Tok);
 static Node* funcall(Token** Rest, Token* Tok);
 static Token* parseTypedef(Token* Tok, Type* BaseTy);
 static Node* LVarInitializer(Token** Rest, Token* Tok, Obj* Var);
+static void GVarInitializer(Token** Rest, Token* Tok, Obj* Var);
 
 static Node* logOr(Token** Rest, Token* Tok); 
 static Node* logAnd(Token** Rest, Token* Tok); 
@@ -189,6 +190,7 @@ static Node* bitOr(Token** Rest, Token* Tok);
 static Node* bitXor(Token** Rest, Token* Tok); 
 static Node* bitAnd(Token** Rest, Token* Tok); 
 static int64_t constExpr(Token** Rest, Token* Tok);
+static int64_t eval(Node* Nd);
 static Scope *Scp = &(Scope) {};
 
 static void enterScope(void) {
@@ -930,6 +932,42 @@ static Node* LVarInitializer(Token** Rest, Token* Tok, Obj* Var) {
     return newBinary(ND_COMMA, LHS, RHS, Tok);
 }
 
+static void writeBuf(char* Buf, uint64_t Val, int Sz) {
+    if(Sz == 1){
+        *Buf = Val;
+    }else if(Sz == 2) {
+        *(uint16_t *) Buf = Val;
+    }else if(Sz == 4) {
+        *(uint32_t *) Buf = Val;
+    }else if(Sz == 8) {
+        *(uint64_t *) Buf = Val;
+    }else {
+        unreachable();
+    }
+}
+
+static void writeGVarData(Initializer* Init, Type* Ty, char* Buf, int Offset) {
+    if(Ty->typeKind == TypeARRAY) {
+        int Sz = Ty->Base->Size;
+        for(int i = 0; i < Ty->ArrayLen; ++i) {
+            writeGVarData(Init->Children[i], Ty->Base, Buf, Offset + Sz * i);
+        }
+        return;
+    }
+    if(Init->Expr) {
+        writeBuf(Buf + Offset, eval(Init->Expr), Ty->Size);
+    }
+}
+
+static void GVarInitializer(Token** Rest, Token* Tok, Obj* Var) {
+    Initializer* Init = initializer(Rest, Tok, Var->Ty, &Var->Ty);
+
+    char *Buf = calloc(1, sizeof(Var->Ty->Size));
+
+    writeGVarData(Init, Var->Ty, Buf, 0);
+
+    Var->InitData = Buf;
+}
 static Node* stmt(Token** Rest, Token* Tok){
     if(equal(Tok, "return")) {
         Node* Nd = newNode(ND_RETURN, Tok);
@@ -1586,7 +1624,10 @@ static Token* globalVariable(Token* Tok, Type* BaseTy) {
             Tok = skip(Tok, ",");
         First = false;
         Type* Ty = declarator(&Tok, Tok, BaseTy);
-        newGVar(genIdent(Ty->Name), Ty);
+        Obj* Var = newGVar(genIdent(Ty->Name), Ty);
+        if(equal(Tok, "=")) {
+            GVarInitializer(&Tok, Tok->Next, Var);
+        }
     }
     return Tok;
 }
