@@ -25,6 +25,7 @@ static char *ArgReg[] = {"a0", "a1", "a2", "a3", "a4", "a5"};
 typedef struct Type Type;
 typedef struct Node Node;
 typedef struct Member Member;
+typedef struct Relocation Relocation;
 
 typedef enum {
     TK_PUNCT,
@@ -105,9 +106,18 @@ struct Obj {
   Obj* Param;
 
   char* InitData;
+  Relocation* Rel; //Pointer to another globle variable 
   Node *Body;    
   Obj *Locals; 
   int StackSize;
+
+};
+
+struct Relocation {
+    Relocation* Next;
+    int Offset;         //relative globle Varible Offset
+    char* Label;        //relative var Name
+    long Addend;        //add number
 };
 
 /*semantic analysis*/

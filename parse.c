@@ -184,7 +184,9 @@ static Token* parseTypedef(Token* Tok, Type* BaseTy);
 static Node* LVarInitializer(Token** Rest, Token* Tok, Obj* Var);
 static void GVarInitializer(Token** Rest, Token* Tok, Obj* Var);
 
+static int64_t eval2(Node* Nd, char** Label); 
 static Node* logOr(Token** Rest, Token* Tok); 
+static int64_t evalRVal(Node* Nd, char** Label);
 static Node* logAnd(Token** Rest, Token* Tok); 
 static Node* bitOr(Token** Rest, Token* Tok); 
 static Node* bitXor(Token** Rest, Token* Tok); 
@@ -946,34 +948,56 @@ static void writeBuf(char* Buf, uint64_t Val, int Sz) {
     }
 }
 
-static void writeGVarData(Initializer* Init, Type* Ty, char* Buf, int Offset) {
+static Relocation* writeGVarData(Relocation* Cur, Initializer* Init, Type* Ty, char* Buf, int Offset) {
     if(Ty->typeKind == TypeARRAY) {
         int Sz = Ty->Base->Size;
         for(int i = 0; i < Ty->ArrayLen; ++i) {
-            writeGVarData(Init->Children[i], Ty->Base, Buf, Offset + Sz * i);
+            Cur = writeGVarData(Cur, Init->Children[i], Ty->Base, Buf, Offset + Sz * i);
         }
-        return;
+        return Cur;
     }
 
     if(Ty->typeKind == TypeSTRUCT) {
         for(Member* mem = Ty->Mem; mem; mem = mem->Next) {
-            writeGVarData(Init->Children[mem->Idx], mem->Ty, Buf, Offset + mem->Offset);
+            Cur = writeGVarData(Cur, Init->Children[mem->Idx], mem->Ty, Buf, Offset + mem->Offset);
         }
-        return;
+        return Cur;
+    }
+    
+    if(Ty->typeKind == TypeUNION) {
+        return writeGVarData(Cur, Init->Children[0], Ty->Mem->Ty, Buf, Offset);
     }
 
-    if(Init->Expr) {
-        writeBuf(Buf + Offset, eval(Init->Expr), Ty->Size);
+    if(!Init->Expr) {
+        return Cur;
     }
+
+    char* Label = NULL;
+    uint64_t Val = eval2(Init->Expr, &Label);
+    if(!Label) {
+        writeBuf(Buf + Offset, Val, Ty->Size);
+        return Cur;
+    }
+
+    Relocation* Rel = calloc(1, sizeof(Relocation));
+    Rel->Label = Label;
+    Rel->Offset = Offset;
+    Rel->Addend = Val;
+
+    Cur->Next = Rel;
+
+    return Cur->Next;
 }
 
 static void GVarInitializer(Token** Rest, Token* Tok, Obj* Var) {
     Initializer* Init = initializer(Rest, Tok, Var->Ty, &Var->Ty);
+    Relocation Head = {};
 
     char *Buf = calloc(1, sizeof(Var->Ty->Size));
 
-    writeGVarData(Init, Var->Ty, Buf, 0);
-
+    writeGVarData(&Head, Init, Var->Ty, Buf, 0);
+    
+    Var->Rel = Head.Next;
     Var->InitData = Buf;
 }
 static Node* stmt(Token** Rest, Token* Tok){
@@ -1149,13 +1173,17 @@ static Node* stmt(Token** Rest, Token* Tok){
 }
 
 static int64_t eval(Node* Nd) {
+    return eval2(Nd, NULL);
+}
+
+static int64_t eval2(Node* Nd, char** Label) {
     addType(Nd);
 
     switch(Nd->Kind) {
         case ND_ADD:
-            return eval(Nd->LHS) + eval(Nd->RHS);
+            return eval2(Nd->LHS, Label) + eval(Nd->RHS);
         case ND_SUB:
-            return eval(Nd->LHS) - eval(Nd->RHS);
+            return eval2(Nd->LHS, Label) - eval(Nd->RHS);
         case ND_MUL:
             return eval(Nd->LHS) * eval(Nd->RHS);
         case ND_DIV:
@@ -1183,9 +1211,9 @@ static int64_t eval(Node* Nd) {
         case ND_LE:
             return eval(Nd->LHS) <= eval(Nd->RHS);
         case ND_COND:
-            return eval(Nd->Cond) ? eval(Nd->Then) : eval(Nd->Els);
+            return eval(Nd->Cond) ? eval2(Nd->Then, Label) : eval2(Nd->Els, Label);
         case ND_COMMA:
-            return eval(Nd->RHS);
+            return eval2(Nd->RHS, Label);
         case ND_NOT:
             return !eval(Nd->LHS);
         case ND_BITNOT:
@@ -1194,24 +1222,59 @@ static int64_t eval(Node* Nd) {
             return eval(Nd->LHS) && eval(Nd->RHS);
         case ND_LOGOR:
             return eval(Nd->LHS) || eval(Nd->RHS);
-        case ND_CAST:
+        case ND_CAST: {
+            int64_t Val = eval2(Nd->LHS, Label);
             if(isInteger(Nd->Ty)) {
                   switch(Nd->Ty->Size){
                     case 1:
-                        return (uint8_t)eval(Nd->LHS);
+                        return (uint8_t)Val;
                     case 2:
-                        return (uint16_t)eval(Nd->LHS);
+                        return (uint16_t)Val;
                     case 4:
-                        return (uint32_t)eval(Nd->LHS);
+                        return (uint32_t)Val;
                   }
             }
-            return eval(Nd->LHS);
+            return Val;
+        }
         case ND_NUM:
            return Nd->Val;
+        case ND_ADDR:
+           return evalRVal(Nd->LHS, Label);
+        case ND_MEMBER:
+           if(!Label)
+               errorTok(Nd->Tok, "not a compile-time constant");
+           if(Nd->Ty->typeKind != TypeARRAY) // ?
+               errorTok(Nd->Tok, "invalid Initializer");
+           return evalRVal(Nd->LHS, Label) + Nd->Mem->Offset;
+        case ND_VAR:
+           if(!Label)
+               errorTok(Nd->Tok, "not a compile-time constant");
+           if(Nd->Var->Ty->typeKind != TypeARRAY && Nd->Var->Ty->typeKind != TypeFunc) // ? why ?
+               errorTok(Nd->Tok, "invalid Initializer");
+           *Label = Nd->Var->Name;
+           return 0;
         default:
            break;
     }
     errorTok(Nd->Tok, "not a compile time constant");
+    return -1;
+}
+
+static int64_t evalRVal(Node* Nd, char** Label) {
+    switch(Nd->Kind) {
+        case ND_VAR:
+            if(Nd->Var->IsLocal)
+                errorTok(Nd->Tok, "not a compile constant");
+            *Label = Nd->Var->Name;
+            return 0;
+        case ND_DEREF:
+            return eval2(Nd->LHS, Label);
+        case ND_MEMBER:
+            return evalRVal(Nd->LHS, Label) + Nd->Mem->Offset;
+        default:
+            break;
+    }
+    errorTok(Nd->Tok, "invalid Initializer");
     return -1;
 }
 
