@@ -9,4 +9,6 @@ void assert(int expected, int actual, char *code) {
     exit(1);
   }
 }
+int ext1 = 5;
+int *ext2 = &ext1;
 static int static_fn() { return 5; }

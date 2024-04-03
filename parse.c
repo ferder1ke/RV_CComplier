@@ -78,6 +78,7 @@ struct VarScope {
 typedef struct {
     bool IsTypedef;
     bool IsStatic;
+    bool IsExtern;
 } VarAttr;
 
 // program = (typedef | functionDefinition | globalVariable)*
@@ -334,6 +335,7 @@ static Obj* newLVar(char* Name, Type* Ty) {
 
 static Obj* newGVar(char* Name, Type* Ty) {
     Obj* Var = newVar(Name, Ty);
+    Var->IsDefinition = true;
     Var->Next = Globals;
     Globals = Var;
     return Var;
@@ -364,17 +366,18 @@ Type* declspec(Token** Rest, Token* Tok, VarAttr* Attr) {
     Type* Ty = TypeInt;
     
     while(isTypename(Tok)) {
-        if(equal(Tok, "typedef") || equal(Tok, "static")) {
+        if(equal(Tok, "typedef") || equal(Tok, "static") || equal(Tok, "extern")) {
             if(!Attr)
                 errorTok(Tok, "storage class specifier is not allowed in this context");
             if(equal(Tok, "typedef")) {
                 Attr->IsTypedef = true;
-            }
-            if(equal(Tok, "static")) {
+            } else if(equal(Tok, "static")) {
                 Attr->IsStatic = true;
+            } else if(equal(Tok, "extern")) {
+                Attr->IsExtern = true;
             }
-            if(equal(Tok, "typedef") && equal(Tok, "static")) {
-                errorTok(Tok, "typedef and static may not be used together");
+            if(Attr->IsTypedef && (Attr->IsStatic || Attr->IsExtern)) {
+                errorTok(Tok, "typedef and static/extern not be used together");
             }
             Tok = Tok->Next;
             continue;
@@ -624,7 +627,8 @@ static Type* typeSuffix(Token** Rest, Token* Tok, Type* Ty) {
 }
 
 static bool isTypename(Token* Tok) {
-    static char* Kw[] = {"int", "_Bool", "long", "short", "char", "struct", "union", "void", "typedef", "enum", "static"};
+    static char* Kw[] = {"int", "_Bool", "long", "short", "char", "struct", 
+                         "union", "void", "typedef", "enum", "static", "extern"};
     for(int i = 0; i < sizeof(Kw) / sizeof(*Kw); i++) {
         if(equal(Tok, Kw[i]))
             return true;
@@ -1795,7 +1799,7 @@ static Token* function(Token* Tok, Type* BaseTy, VarAttr* Attr) {
     return Tok;
 }
 
-static Token* globalVariable(Token* Tok, Type* BaseTy) {
+static Token* globalVariable(Token* Tok, Type* BaseTy, VarAttr* Attr) {
     bool First = true;
     while(!consume(&Tok, Tok, ";")) {
         if(!First)
@@ -1803,6 +1807,7 @@ static Token* globalVariable(Token* Tok, Type* BaseTy) {
         First = false;
         Type* Ty = declarator(&Tok, Tok, BaseTy);
         Obj* Var = newGVar(genIdent(Ty->Name), Ty);
+        Var->IsDefinition = !Attr->IsExtern;
         if(equal(Tok, "=")) {
             GVarInitializer(&Tok, Tok->Next, Var);
         }
@@ -2004,7 +2009,7 @@ Obj* parse(Token *Tok) {
             Tok = function(Tok, BaseTy, &Attr);
             continue;
         }
-        Tok = globalVariable(Tok, BaseTy);    
+        Tok = globalVariable(Tok, BaseTy, &Attr);    
     }
     return Globals;
 }
