@@ -92,7 +92,7 @@ typedef struct {
 // declarator = "*"* ident typeSuffix
 // typeSuffix = "(" funcParams? | "[" arrayDimensions | ε
 // arrayDimensions = constExpr? "]" typeSuffix
-// funcParams = (param ("," param)*)? ")"
+// funcParams = ( "void" | param ("," param)*)? ")"
 // param = declspec declarator
 
 
@@ -242,7 +242,7 @@ static VarScope* pushScope(char* Name) {
     return S;
 }
 
-static Initializer* newInitializer(Type* Ty, bool IsFlexiable) {
+static Initializer* newInitializer(Type* Ty, bool IsFlexible) {
     Initializer* Init = calloc(1, sizeof(Initializer));
     Init->Ty = Ty;
 
@@ -252,7 +252,7 @@ static Initializer* newInitializer(Type* Ty, bool IsFlexiable) {
             ++Len;
         Init->Children = calloc(Len, sizeof(Initializer*));
         for(Member* Mem = Ty->Mem; Mem; Mem = Mem->Next) {
-            if(IsFlexiable && Ty->IsFlexiable && !Mem->Next){
+            if(IsFlexible && Ty->IsFlexible && !Mem->Next){
                 Initializer* Child = calloc(1, sizeof(Initializer));
                 Child->Ty = Mem->Ty;
                 Child->IsFlexible = true;
@@ -264,7 +264,7 @@ static Initializer* newInitializer(Type* Ty, bool IsFlexiable) {
         return Init;
     }
     if(Ty->typeKind == TypeARRAY) {
-        if(IsFlexiable && Ty->Size < 0) {
+        if(IsFlexible && Ty->Size < 0) {
             Init->IsFlexible = true;
             return Init;
         }
@@ -566,6 +566,11 @@ static void resolveGotoLabels(void) {
 }
 
 static Type* funcParams(Token** Rest, Token* Tok, Type* Ty) {
+   if(equal(Tok, "void") && equal(Tok->Next, ")")) {
+       *Rest = Tok->Next->Next;
+       return funcType(Ty);
+   }
+
    Type Head = {};
    Type* Cur = &Head;
    while(!equal(Tok, ")")) {
@@ -963,7 +968,7 @@ static Initializer* initializer(Token** Rest, Token* Tok, Type* Ty, Type** NewTy
    Initializer* Init = newInitializer(Ty, true);
    initializer2(Rest, Tok, Init);
 
-   if((Ty->typeKind == TypeUNION || Ty->typeKind == TypeSTRUCT) && Ty->IsFlexiable) {
+   if((Ty->typeKind == TypeUNION || Ty->typeKind == TypeSTRUCT) && Ty->IsFlexible) {
        Ty = copyStructType(Ty);
        Member* Mem = Ty->Mem;
        
@@ -1836,7 +1841,7 @@ static void structMembers(Token** Rest, Token* Tok, Type* Ty){
 
     if(Cur != &Head && Cur->Ty->typeKind == TypeARRAY && Cur->Ty->ArrayLen < 0) {
         Cur->Ty = arrayof(Cur->Ty->Base, 0);
-        Ty->IsFlexiable = true;
+        Ty->IsFlexible = true;
     }
     *Rest = Tok->Next;
     Ty->Mem = Head.Next;
