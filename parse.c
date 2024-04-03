@@ -104,8 +104,13 @@ typedef struct {
 // Initializer = stringInitializer  | arrayInitializer |
 //               structInitializer  | unionInitializer | assign
 // stringInitializer = stringLiteral
-// arrayInitializer = "{" Initializer ("," Initializer)* "}" | assign
-// structInitializer = "{" Initializer ("," Initializer)* "}" | assign
+// arrayInitializer = arrayInitializer1 | arrayInitializer2
+// arrayInitializer1 = "{" Initializer ("," Initializer)* "}"
+// arrayInitializer2 =  Initializer ("," Initializer)* 
+
+// structInitializer =  structInitializer1 | structInitializer2
+// structInitializer1 = "{" Initializer ("," Initializer)* "}"
+// structInitializer2 =  Initializer ("," Initializer)* 
 // unionInitializer = "{" Initializer "}"  
 
 // stmt = "return" expr ";" 
@@ -801,7 +806,7 @@ static int counterArrayInitElements(Token* Tok, Type* Ty) {
     return i;
 }
 
-static void arrayInitializer(Token** Rest, Token* Tok, Initializer* Init) {
+static void arrayInitializer1(Token** Rest, Token* Tok, Initializer* Init) {
    Tok = skip(Tok, "{");
    if(Init->IsFlexible) {
        int Len = counterArrayInitElements(Tok, Init->Ty);
@@ -817,13 +822,30 @@ static void arrayInitializer(Token** Rest, Token* Tok, Initializer* Init) {
    }
 }
 
-static void unionInitializer(Token** Rest, Token* Tok, Initializer* Init) {
-    Tok = skip(Tok, "{");
-    initializer2(&Tok, Tok, Init->Children[0]);
-    *Rest = skip(Tok, "}");
+static void arrayInitializer2(Token** Rest, Token* Tok, Initializer* Init) {
+   if(Init->IsFlexible) {
+       int Len = counterArrayInitElements(Tok, Init->Ty);
+       *Init = *newInitializer(arrayof(Init->Ty->Base, Len), false);
+   }
+
+   for(int i = 0; i < Init->Ty->ArrayLen && !equal(Tok, "}"); ++i) {
+       if(i > 0)
+           Tok = skip(Tok, ",");
+       initializer2(&Tok, Tok, Init->Children[i]);
+   }
+   *Rest = Tok;
 }
 
-static void structInitializer(Token** Rest, Token* Tok, Initializer* Init) {
+static void unionInitializer(Token** Rest, Token* Tok, Initializer* Init) {
+    if(equal(Tok, "{")) {
+        initializer2(&Tok, Tok->Next, Init->Children[0]);
+        *Rest = skip(Tok, "}");
+    }else {
+        initializer2(Rest, Tok, Init->Children[0]);
+    }
+}
+
+static void structInitializer1(Token** Rest, Token* Tok, Initializer* Init) {
    Tok = skip(Tok, "{");
    Member* Mem = Init->Ty->Mem;
    while(!consume(Rest, Tok, "}")) {
@@ -839,6 +861,18 @@ static void structInitializer(Token** Rest, Token* Tok, Initializer* Init) {
    }
 }
 
+static void structInitializer2(Token** Rest, Token* Tok, Initializer* Init) {
+   bool First = true;
+   for(Member* Mem = Init->Ty->Mem; Mem && !equal(Tok, "}"); Mem = Mem->Next) {
+       if(!First) {
+           Tok = skip(Tok, ",");
+       }
+       First = false;
+       initializer2(&Tok, Tok, Init->Children[Mem->Idx]);
+   }
+   *Rest = Tok;
+}
+
 static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
     if(Init->Ty->typeKind == TypeARRAY && Tok->Kind == TK_STR) {
         stringInitializer(Rest, Tok, Init);
@@ -851,20 +885,28 @@ static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
     }
 
     if(Init->Ty->typeKind == TypeSTRUCT) {
-        if(!equal(Tok, "{")) {
-            Node* Expr = assign(Rest, Tok);
-            addType(Expr);
-            if(Expr->Ty->typeKind == TypeSTRUCT) {
-                Init->Expr = Expr;
-                return;
-            }
+        if(equal(Tok, "{")) {
+            structInitializer1(Rest, Tok, Init);
+            return;
         }
-        structInitializer(Rest, Tok, Init);
+        Node* Expr = assign(Rest, Tok);
+        addType(Expr);
+        if(Expr->Ty->typeKind == TypeSTRUCT) {
+            Init->Expr = Expr;
+            return;
+        }
+        structInitializer2(Rest, Tok, Init);
         return;
+        
     }
+    
 
     if(Init->Ty->typeKind == TypeARRAY) {
-        arrayInitializer(Rest, Tok, Init);
+        if(equal(Tok, "{")) {
+            arrayInitializer1(Rest, Tok, Init);
+        } else {
+            arrayInitializer2(Rest, Tok, Init);
+        }
         return;
     }
     Init->Expr = assign(Rest, Tok);
@@ -1243,13 +1285,13 @@ static int64_t eval2(Node* Nd, char** Label) {
         case ND_MEMBER:
            if(!Label)
                errorTok(Nd->Tok, "not a compile-time constant");
-           if(Nd->Ty->typeKind != TypeARRAY) // ?
+           if(Nd->Ty->typeKind != TypeARRAY) 
                errorTok(Nd->Tok, "invalid Initializer");
            return evalRVal(Nd->LHS, Label) + Nd->Mem->Offset;
         case ND_VAR:
            if(!Label)
                errorTok(Nd->Tok, "not a compile-time constant");
-           if(Nd->Var->Ty->typeKind != TypeARRAY && Nd->Var->Ty->typeKind != TypeFunc) // ? why ?
+           if(Nd->Var->Ty->typeKind != TypeARRAY && Nd->Var->Ty->typeKind != TypeFunc) 
                errorTok(Nd->Tok, "invalid Initializer");
            *Label = Nd->Var->Name;
            return 0;
