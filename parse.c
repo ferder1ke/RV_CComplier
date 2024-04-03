@@ -1796,6 +1796,10 @@ static void structMembers(Token** Rest, Token* Tok, Type* Ty){
             Cur = Cur->Next = Mem;
         }
     }
+
+    if(Cur != &Head && Cur->Ty->typeKind == TypeARRAY && Cur->Ty->ArrayLen < 0) {
+        Cur->Ty = arrayof(Cur->Ty->Base, 0);
+    }
     *Rest = Tok->Next;
     Ty->Mem = Head.Next;
 }

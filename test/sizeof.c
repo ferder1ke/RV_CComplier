@@ -10,6 +10,7 @@
 
 int main() {
 
+ ASSERT(4, sizeof(struct { int x, y[]; }));
 ASSERT(1, ({ char i; sizeof(++i); }));
   ASSERT(8, sizeof(int(*)[10]));
   ASSERT(8, sizeof(int(*)[][10]));
