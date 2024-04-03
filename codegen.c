@@ -593,12 +593,14 @@ static void assignLVarOffsets(Obj *Prog) {
 
 static void emitData(Obj* Prog) {
 
-  printLn("  # 数据段标签");
-  printLn("  .data");
   for (Obj *Var = Prog; Var; Var = Var->Next) {
      if(Var->IsFunction)
          continue;
+     printLn("\n  # 全局段%s", Var->Name);
+     printLn("  .globl %s", Var->Name);
      if(Var->InitData){
+         printLn("\n  # 数据段标签");
+         printLn("  .data");
          printLn("%s:", Var->Name);
          Relocation* Rel = Var->Rel;
          int Pos = 0;
@@ -617,12 +619,12 @@ static void emitData(Obj* Prog) {
                  }
              }
          }
-     }
-    else{
-        printLn("  .globl %s", Var->Name);
-        printLn("  # 全局变量%s", Var->Name);
+         continue;
+     } else {
+        printLn("  # 未初始化的全局变量");
+        printLn("  .bss");
         printLn("%s:", Var->Name);
-        printLn("  # 零填充%d位", Var->Ty->Size);
+        printLn("  # 全局变量零填充%d字节", Var->Ty->Size);
         printLn("  .zero %d", Var->Ty->Size);
     }
   }
