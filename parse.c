@@ -909,6 +909,12 @@ static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
         }
         return;
     }
+
+    if(equal(Tok, "{")) {
+        initializer2(&Tok, Tok->Next, Init);
+        *Rest = skip(Tok, "}");
+        return;
+    }
     Init->Expr = assign(Rest, Tok);
 }
 
