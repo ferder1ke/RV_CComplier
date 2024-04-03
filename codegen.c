@@ -591,6 +591,17 @@ static void assignLVarOffsets(Obj *Prog) {
  
 }
 
+unsigned int simpleLog2(unsigned int Align) {
+    int count = 0;
+    while(Align > 1) {
+        if(Align % 2 == 1) 
+            error("wrong val%d", Align);
+        Align >>= 1;
+        ++count;
+    }
+    return count;
+}
+
 static void emitData(Obj* Prog) {
 
   for (Obj *Var = Prog; Var; Var = Var->Next) {
@@ -599,6 +610,10 @@ static void emitData(Obj* Prog) {
      printLn("\n  # 全局段%s", Var->Name);
      printLn("  .globl %s", Var->Name);
      if(Var->InitData){
+         printLn("  # 对齐全局变量");
+         if (!Var->Ty->Align)
+           error("Align can not be 0!");
+         printLn("  .align %d", simpleLog2(Var->Ty->Align));
          printLn("\n  # 数据段标签");
          printLn("  .data");
          printLn("%s:", Var->Name);
