@@ -83,6 +83,7 @@ struct Type {
     
     int ArrayLen;
     Member* Mem; 
+    bool IsFlexiable;
     //Function
     Type* ReturnTy;
     Type* Param;

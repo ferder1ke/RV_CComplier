@@ -242,7 +242,7 @@ static VarScope* pushScope(char* Name) {
     return S;
 }
 
-static Initializer* newInitializer(Type* Ty, bool IsFlexible) {
+static Initializer* newInitializer(Type* Ty, bool IsFlexiable) {
     Initializer* Init = calloc(1, sizeof(Initializer));
     Init->Ty = Ty;
 
@@ -252,12 +252,19 @@ static Initializer* newInitializer(Type* Ty, bool IsFlexible) {
             ++Len;
         Init->Children = calloc(Len, sizeof(Initializer*));
         for(Member* Mem = Ty->Mem; Mem; Mem = Mem->Next) {
-            Init->Children[Mem->Idx] = newInitializer(Mem->Ty, false);
+            if(IsFlexiable && Ty->IsFlexiable && !Mem->Next){
+                Initializer* Child = calloc(1, sizeof(Initializer));
+                Child->Ty = Mem->Ty;
+                Child->IsFlexible = true;
+                Init->Children[Mem->Idx] = Child;
+            }else {
+                Init->Children[Mem->Idx] = newInitializer(Mem->Ty, false);
+            }
         }
         return Init;
     }
     if(Ty->typeKind == TypeARRAY) {
-        if(IsFlexible && Ty->Size < 0) {
+        if(IsFlexiable && Ty->Size < 0) {
             Init->IsFlexible = true;
             return Init;
         }
@@ -890,7 +897,7 @@ static void structInitializer2(Token** Rest, Token* Tok, Initializer* Init) {
    *Rest = Tok;
 }
 
-static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
+static void initializer2(Token** Rest, Token* Tok, Initializer* Init) { //the real Initializer for uninitializer data structure
     if(Init->Ty->typeKind == TypeARRAY && Tok->Kind == TK_STR) {
         stringInitializer(Rest, Tok, Init);
         return;
@@ -935,9 +942,39 @@ static void initializer2(Token** Rest, Token* Tok, Initializer* Init) {
     Init->Expr = assign(Rest, Tok);
 }
 
+static Type* copyStructType(Type* Ty) {
+    Ty = copyType(Ty);
+
+    Member* Mem = calloc(1, sizeof(Member));
+
+    Member Head = {};
+    Member* Cur = &Head;
+    for(Member* mem = Ty->Mem; mem; mem = mem->Next) {
+        Member* M = calloc(1, sizeof(Member));
+        *M = *mem;
+        Cur->Next = M;
+        Cur = Cur->Next;
+    }
+    Ty->Mem = Head.Next;
+    return Ty;
+}
+
 static Initializer* initializer(Token** Rest, Token* Tok, Type* Ty, Type** NewTy) {
    Initializer* Init = newInitializer(Ty, true);
    initializer2(Rest, Tok, Init);
+
+   if((Ty->typeKind == TypeUNION || Ty->typeKind == TypeSTRUCT) && Ty->IsFlexiable) {
+       Ty = copyStructType(Ty);
+       Member* Mem = Ty->Mem;
+       
+       while(Mem->Next)
+           Mem = Mem->Next;
+
+       Mem->Ty = Init->Children[Mem->Idx]->Ty;
+       Ty->Size += Mem->Ty->Size;
+       *NewTy = Ty;
+       return Init;
+   }
    *NewTy = Init->Ty;
    return Init;
 }
@@ -1799,6 +1836,7 @@ static void structMembers(Token** Rest, Token* Tok, Type* Ty){
 
     if(Cur != &Head && Cur->Ty->typeKind == TypeARRAY && Cur->Ty->ArrayLen < 0) {
         Cur->Ty = arrayof(Cur->Ty->Base, 0);
+        Ty->IsFlexiable = true;
     }
     *Rest = Tok->Next;
     Ty->Mem = Head.Next;
