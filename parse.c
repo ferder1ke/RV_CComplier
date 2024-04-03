@@ -200,6 +200,9 @@ static Node* bitAnd(Token** Rest, Token* Tok);
 static int64_t constExpr(Token** Rest, Token* Tok);
 static int64_t eval(Node* Nd);
 static Scope *Scp = &(Scope) {};
+static Token* globalVariable(Token* Tok, Type* BaseTy, VarAttr* Attr); 
+static bool isFunction(Token* Tok); 
+static Token* function(Token* Tok, Type* BaseTy, VarAttr* Attr); 
 
 static void enterScope(void) {
     Scope* S = calloc(1, sizeof(Scope));
@@ -757,6 +760,17 @@ static Node* compoundStmt(Token** Rest, Token* Tok) {
                 Tok = parseTypedef(Tok, BaseTy);
                 continue;
            }
+           
+           if(isFunction(Tok)) {
+               Tok = function(Tok, BaseTy, &Attr);
+               continue;
+           }
+
+           if(Attr.IsExtern) {
+               Tok = globalVariable(Tok, BaseTy, &Attr);
+               continue;
+           }
+
            Cur->Next  = declaration(&Tok, Tok, BaseTy);
        }else {
            Cur->Next = stmt(&Tok, Tok);
