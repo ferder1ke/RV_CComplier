@@ -35,8 +35,17 @@ struct {int a[2];} g40[2] = {{1, 2}, 3, 4};
 struct {int a[2];} g41[2] = {1, 2, 3, 4};
 char g43[][4] = {'f', 'o', 'o', 0, 'b', 'a', 'r', 0};
 char *g44 = {"foo"};
+
+
+
 int main() {
-   ASSERT(0, strcmp(g44, "foo"));
+   
+  ASSERT(3, ({ int a[]={1,2,3,}; a[2]; }));
+  ASSERT(1, ({ struct {int a,b,c;} x={1,2,3,}; x.a; }));
+  ASSERT(1, ({ union {int a; char b;} x={1,}; x.a; }));
+  ASSERT(2, ({ enum {x,y,z,}; z; }));
+
+  ASSERT(0, strcmp(g44, "foo"));
   // [97] 支持局部变量初始化器
   ASSERT(1, ({ int x[3]={1,2,3}; x[0]; }));
   ASSERT(2, ({ int x[3]={1,2,3}; x[1]; }));

@@ -88,7 +88,7 @@ typedef struct {
 //                            | enumSpecifier)+
 // enumSpecifier = indent ? "{" enumList? "}"
 //               | ident ("{" enumList? "}")?
-// enumList = ident ("=" constExpr)? ("," ident ("=" constExpr)?)*
+// enumList = ident ("=" constExpr)? ("," ident ("=" constExpr)?)* ","?
 // declarator = "*"* ident typeSuffix
 // typeSuffix = "(" funcParams? | "[" arrayDimensions | ε
 // arrayDimensions = constExpr? "]" typeSuffix
@@ -105,12 +105,12 @@ typedef struct {
 //               structInitializer  | unionInitializer | assign
 // stringInitializer = stringLiteral
 // arrayInitializer = arrayInitializer1 | arrayInitializer2
-// arrayInitializer1 = "{" Initializer ("," Initializer)* "}"
-// arrayInitializer2 =  Initializer ("," Initializer)* 
+// arrayInitializer1 = "{" Initializer ("," Initializer)* ","? "}"
+// arrayInitializer2 =  Initializer ("," Initializer)* ","?
 
 // structInitializer =  structInitializer1 | structInitializer2
-// structInitializer1 = "{" Initializer ("," Initializer)* "}"
-// structInitializer2 =  Initializer ("," Initializer)* 
+// structInitializer1 = "{" Initializer ("," Initializer)* ","? "}"
+// structInitializer2 =  Initializer ("," Initializer)* ","?
 // unionInitializer = "{" Initializer "}"  
 
 // stmt = "return" expr ";" 
@@ -620,6 +620,22 @@ static bool isTypename(Token* Tok) {
     return findTypedef(Tok);
 }
 
+static bool isEnd(Token* Tok) {
+    return equal(Tok, "}") || (equal(Tok, ",") && equal(Tok->Next, "}"));
+}
+
+static bool consumeEnd(Token** Rest, Token* Tok) {
+    if(equal(Tok, ",") && equal(Tok->Next, "}")) {
+        *Rest = Tok->Next->Next;
+        return true;
+    }
+    if(equal(Tok, "}")) {
+        *Rest = Tok->Next;
+        return true;
+    }
+    return false;
+}
+
 static char* newUniqueName(void) {
     static int Id = 0;
     return format(".L..%d", Id++);
@@ -798,7 +814,7 @@ static int counterArrayInitElements(Token* Tok, Type* Ty) {
     Initializer* Dummy = newInitializer(Ty->Base, false);
     int i = 0;
 
-    for(; !equal(Tok, "}"); ++i) {
+    for(; !consumeEnd(&Tok, Tok); ++i) {
         if(i != 0)
             Tok = skip(Tok, ",");
         initializer2(&Tok, Tok, Dummy);
@@ -812,7 +828,7 @@ static void arrayInitializer1(Token** Rest, Token* Tok, Initializer* Init) {
        int Len = counterArrayInitElements(Tok, Init->Ty);
        *Init = *newInitializer(arrayof(Init->Ty->Base, Len), false);
    }
-   for(int i = 0 ; !consume(Rest, Tok, "}") ; ++i) {
+   for(int i = 0 ; !consumeEnd(Rest, Tok) ; ++i) {
        if(i > 0)
            Tok = skip(Tok, ",");
        if(i < Init->Ty->ArrayLen)
@@ -828,7 +844,7 @@ static void arrayInitializer2(Token** Rest, Token* Tok, Initializer* Init) {
        *Init = *newInitializer(arrayof(Init->Ty->Base, Len), false);
    }
 
-   for(int i = 0; i < Init->Ty->ArrayLen && !equal(Tok, "}"); ++i) {
+   for(int i = 0; i < Init->Ty->ArrayLen && !isEnd(Tok); ++i) {
        if(i > 0)
            Tok = skip(Tok, ",");
        initializer2(&Tok, Tok, Init->Children[i]);
@@ -839,6 +855,7 @@ static void arrayInitializer2(Token** Rest, Token* Tok, Initializer* Init) {
 static void unionInitializer(Token** Rest, Token* Tok, Initializer* Init) {
     if(equal(Tok, "{")) {
         initializer2(&Tok, Tok->Next, Init->Children[0]);
+        consume(&Tok, Tok, ",");
         *Rest = skip(Tok, "}");
     }else {
         initializer2(Rest, Tok, Init->Children[0]);
@@ -848,7 +865,7 @@ static void unionInitializer(Token** Rest, Token* Tok, Initializer* Init) {
 static void structInitializer1(Token** Rest, Token* Tok, Initializer* Init) {
    Tok = skip(Tok, "{");
    Member* Mem = Init->Ty->Mem;
-   while(!consume(Rest, Tok, "}")) {
+   while(!consumeEnd(Rest, Tok)) {
        if(Mem != Init->Ty->Mem) {
            Tok = skip(Tok, ",");
        }
@@ -863,7 +880,7 @@ static void structInitializer1(Token** Rest, Token* Tok, Initializer* Init) {
 
 static void structInitializer2(Token** Rest, Token* Tok, Initializer* Init) {
    bool First = true;
-   for(Member* Mem = Init->Ty->Mem; Mem && !equal(Tok, "}"); Mem = Mem->Next) {
+   for(Member* Mem = Init->Ty->Mem; Mem && !isEnd(Tok); Mem = Mem->Next) {
        if(!First) {
            Tok = skip(Tok, ",");
        }
@@ -1875,7 +1892,7 @@ static Type* enumSpecifier(Token** Rest, Token* Tok) {
    int I = 0;   //Index of enum identifier
    int Val = 0; //val of enum identifier
 
-   while(!equal(Tok, "}")) {
+   while(!consumeEnd(Rest, Tok)) {
        if(I++ > 0)
            Tok = skip(Tok, ",");
        char* Name = genIdent(Tok);
@@ -1889,8 +1906,6 @@ static Type* enumSpecifier(Token** Rest, Token* Tok) {
        S->EnumTy = Ty;
        S->EnumVal = Val++;
    }
-   *Rest = Tok->Next;
-
    if(Tag)
        pushTagScope(Tag, Ty);
    return Ty;
